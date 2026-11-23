@@ -1,0 +1,1729 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0b120e">
+<title>Futbol Wordle</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+  :root {
+    --bg: #0b120e;
+    --bg-2: #111a15;
+    --card: #16211b;
+    --card-2: #1c2a22;
+    --line: #26372d;
+    --text: #e8f0ea;
+    --muted: #8fa496;
+    --green: #2fbf5b;
+    --green-dim: #1f7a3a;
+    --green-glow: rgba(47, 191, 91, .25);
+    --red: #e5484d;
+    --gray: #3a4a40;
+    --radius: 14px;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    background:
+      radial-gradient(ellipse at 50% -20%, rgba(47,191,91,.14), transparent 60%),
+      repeating-linear-gradient(90deg, rgba(255,255,255,.012) 0 80px, transparent 80px 160px),
+      var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+  }
+  button { font: inherit; color: inherit; cursor: pointer; }
+  .wrap {
+    max-width: 540px; margin: 0 auto; padding-block: 0 40px;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+  }
+
+  /* Üst bar */
+  header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 0 12px; border-bottom: 1px solid var(--line); margin-bottom: 14px;
+  }
+  .brand { display: flex; align-items: center; gap: 10px; }
+  .logo {
+    width: 34px; height: 34px; border-radius: 9px;
+    background: linear-gradient(145deg, var(--green), var(--green-dim));
+    display: grid; place-items: center; font-size: 18px;
+    box-shadow: 0 0 18px var(--green-glow);
+  }
+  h1 { font-size: 20px; margin: 0; letter-spacing: .3px; }
+  h1 small { display: block; font-size: 11px; font-weight: 500; color: var(--muted); letter-spacing: .5px; }
+  .icons { display: flex; gap: 6px; }
+  .icon-btn {
+    width: 38px; height: 38px; border-radius: 10px; border: 1px solid var(--line);
+    background: var(--card); font-size: 17px; display: grid; place-items: center;
+    transition: border-color .15s, background .15s;
+  }
+  .icon-btn:hover { border-color: var(--green-dim); background: var(--card-2); }
+
+  /* Mod sekmeleri */
+  .tabs {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 4px;
+    background: var(--bg-2); border: 1px solid var(--line); border-radius: 12px; padding: 4px; margin-bottom: 14px;
+  }
+  .tab {
+    border: 0; background: transparent; padding: 9px; border-radius: 9px; font-weight: 600; font-size: 14px; color: var(--muted);
+  }
+  .tab.active { background: var(--green-dim); color: #fff; }
+
+  /* Zorluk seçimi */
+  .diff-pick[hidden], .game-area[hidden] { display: none; }
+  .diff-pick h2 { font-size: 18px; margin: 6px 2px 4px; text-wrap: balance; }
+  .diff-pick > p { color: var(--muted); font-size: 14px; margin: 0 2px 14px; }
+  .diff-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .diff-card {
+    text-align: left; border: 1px solid var(--line); background: var(--card); border-radius: var(--radius);
+    padding: 16px 14px; display: flex; flex-direction: column; gap: 8px; min-width: 0;
+    transition: border-color .15s, background .15s, transform .1s;
+  }
+  .diff-card:hover { border-color: var(--green); background: var(--card-2); }
+  .diff-card:active { transform: translateY(1px); }
+  .diff-card .dname { font-size: 18px; font-weight: 800; display: flex; align-items: center; gap: 8px; }
+  .diff-card .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--green); }
+  .diff-card.hard .dot { background: var(--red); }
+  .diff-card .ddesc { font-size: 13px; color: #c7d4cb; line-height: 1.45; }
+  .diff-card ul { margin: 0; padding-left: 16px; font-size: 12.5px; color: var(--muted); line-height: 1.6; }
+  @media (max-width: 380px) { .diff-cards { grid-template-columns: 1fr; } }
+
+  .flabel-row { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin: 0 2px 7px; }
+  .flabel-row .flabel { margin: 0; }
+  .diff-badge { font-size: 12px; color: var(--muted); display: inline-flex; align-items: center; gap: 6px; }
+  .diff-badge b { color: var(--text); }
+  .diff-badge .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); }
+  .diff-badge.hard .dot { background: var(--red); }
+  .linkbtn { border: 0; background: none; color: var(--green); font-size: 12px; font-weight: 700; padding: 2px 0; text-decoration: underline; text-underline-offset: 2px; }
+
+  /* Kolay modda baştan açık profil */
+  .profile { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 8px; }
+  .profile[hidden] { display: none; }
+  .profile div { background: var(--card); border: 1px dashed var(--line); border-radius: 12px; padding: 9px 11px; min-width: 0; }
+  .profile .label { font-size: 10.5px; text-transform: uppercase; letter-spacing: .8px; color: var(--muted); }
+  .profile .val { font-size: 14.5px; font-weight: 700; margin-top: 2px; overflow-wrap: anywhere; }
+
+  /* Serbest mod filtreleri */
+  .filters { margin: -4px 0 14px; }
+  .filters[hidden] { display: none; }
+  .filters .flabel { font-size: 11px; text-transform: uppercase; letter-spacing: .8px; color: var(--muted); margin: 0 2px 7px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 6px;
+    border: 1px solid var(--line); background: var(--card); color: var(--text);
+    border-radius: 999px; padding: 6px 11px; font-size: 13px; font-weight: 600;
+    transition: border-color .15s, background .15s;
+  }
+  .chip:hover { border-color: var(--green-dim); }
+  .chip .cnt { font-size: 11px; color: var(--muted); font-weight: 700; font-variant-numeric: tabular-nums; }
+  .chip.active { background: var(--green-dim); border-color: var(--green); color: #fff; }
+  .chip.active .cnt { color: #c9ffd9; }
+  .chip:focus-visible, .tab:focus-visible, .btn:focus-visible, .icon-btn:focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }
+
+  .meta { display: flex; justify-content: space-between; align-items: center; color: var(--muted); font-size: 13px; margin: 0 2px 10px; }
+  .meta b { color: var(--text); }
+
+  /* İpuçları */
+  .clues { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+  .clue {
+    display: flex; align-items: center; gap: 12px;
+    background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
+    padding: 11px 14px; min-height: 50px;
+  }
+  .clue .num {
+    flex: 0 0 auto; width: 26px; height: 26px; border-radius: 50%;
+    background: var(--card-2); border: 1px solid var(--line);
+    display: grid; place-items: center; font-size: 12px; color: var(--muted); font-weight: 700;
+  }
+  .clue .body { flex: 1; min-width: 0; }
+  .clue .label { font-size: 11px; text-transform: uppercase; letter-spacing: .8px; color: var(--muted); }
+  .clue .val { font-size: 15.5px; font-weight: 600; margin-top: 1px; }
+  .clue .years { color: var(--green); font-variant-numeric: tabular-nums; margin-right: 6px; font-weight: 700; }
+  .clue.club .num { background: rgba(47,191,91,.12); border-color: var(--green-dim); color: var(--green); }
+  /* Kulüp renk rozeti: iki renkli kalkan */
+  .num.crest, .clue.club .num.crest {
+    width: 26px; height: 30px; border-radius: 6px 6px 13px 13px;
+    background: linear-gradient(135deg, var(--c1) 0 50%, var(--c2) 50% 100%);
+    border: 1.5px solid rgba(255,255,255,.28); box-shadow: inset 0 0 0 1px rgba(0,0,0,.25);
+  }
+  .num.flag, .clue .num.flag { background: none; border: 0; font-size: 22px; width: 28px; }
+  .pflag { margin-right: 5px; }
+  .crest-row { display: flex; justify-content: center; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+  .crest-row .crest { width: 20px; height: 24px; }
+  .clue.extra { border-style: dashed; }
+  .clue.locked { opacity: .45; }
+  .clue.locked .val { color: var(--muted); font-weight: 500; letter-spacing: 2px; }
+  .clue.new { animation: reveal .55s cubic-bezier(.2,.9,.3,1.2) both; }
+  .clue.new .num { animation: pop .6s ease both .15s; }
+  @keyframes reveal {
+    0% { opacity: 0; transform: translateY(-8px) scale(.97); border-color: var(--green); box-shadow: 0 0 0 0 var(--green-glow); }
+    60% { box-shadow: 0 0 0 6px var(--green-glow); }
+    100% { opacity: 1; transform: none; box-shadow: 0 0 0 0 transparent; }
+  }
+  @keyframes pop { 0% { transform: scale(.4); } 70% { transform: scale(1.2); } 100% { transform: scale(1); } }
+
+  /* Tahmin girişi */
+  .guess-box { position: relative; margin-bottom: 14px; }
+  .input-row { display: flex; gap: 8px; }
+  .input-row input {
+    flex: 1; min-width: 0; height: 48px; border-radius: 12px; border: 1px solid var(--line);
+    background: var(--bg-2); color: var(--text); padding: 0 14px; font-size: 16px; outline: none;
+    transition: border-color .15s, box-shadow .15s;
+  }
+  .input-row input:focus { border-color: var(--green); box-shadow: 0 0 0 3px var(--green-glow); }
+  .btn {
+    height: 48px; padding: 0 16px; border-radius: 12px; border: 1px solid transparent; font-weight: 700; font-size: 15px;
+    background: var(--green); color: #06210f; transition: filter .15s, transform .05s;
+  }
+  .btn:hover { filter: brightness(1.08); }
+  .btn:active { transform: translateY(1px); }
+  .btn.ghost { background: var(--card); color: var(--text); border-color: var(--line); }
+  .btn:disabled { opacity: .4; cursor: not-allowed; }
+  .suggest {
+    position: absolute; left: 0; right: 0; top: 54px; z-index: 20;
+    background: var(--card-2); border: 1px solid var(--line); border-radius: 12px; overflow: hidden;
+    box-shadow: 0 14px 30px rgba(0,0,0,.5); display: none; max-height: 290px; overflow-y: auto;
+  }
+  .suggest.open { display: block; }
+  .suggest div { padding: 11px 14px; cursor: pointer; font-size: 15px; border-bottom: 1px solid var(--line); }
+  .suggest div:last-child { border-bottom: 0; }
+  .suggest div.active, .suggest div:hover { background: var(--green-dim); }
+  .suggest mark { background: none; color: var(--green); font-weight: 700; }
+  .suggest div.active mark, .suggest div:hover mark { color: #c9ffd9; }
+  .msg { min-height: 20px; font-size: 13px; color: var(--red); margin: 6px 2px 0; }
+
+  /* Tahmin geçmişi */
+  .guesses { display: grid; grid-template-columns: 1fr; gap: 6px; }
+  .g {
+    display: flex; align-items: center; gap: 10px; height: 40px; padding: 0 12px;
+    border-radius: 10px; border: 1px dashed var(--line); color: var(--muted); font-size: 14px;
+  }
+  .g .sq { width: 18px; height: 18px; border-radius: 5px; background: var(--card-2); flex: 0 0 auto; }
+  .g.wrong { border: 1px solid rgba(229,72,77,.35); background: rgba(229,72,77,.08); color: var(--text); }
+  .g.wrong .sq { background: var(--red); }
+  .g.pass { border: 1px solid var(--line); background: var(--card); color: var(--muted); font-style: italic; }
+  .g.pass .sq { background: var(--gray); }
+  .g.right { border: 1px solid var(--green); background: rgba(47,191,91,.12); color: var(--text); font-weight: 700; }
+  .g.right .sq { background: var(--green); }
+  .g.new { animation: shake .4s ease; }
+  .g.right.new { animation: bounce .6s ease; }
+  @keyframes shake { 0%,100% { transform: none; } 25% { transform: translateX(-6px); } 75% { transform: translateX(6px); } }
+  @keyframes bounce { 0%,100% { transform: none; } 40% { transform: scale(1.04); } }
+
+  .end-bar { display: none; gap: 8px; margin-top: 14px; }
+  .end-bar.show { display: flex; }
+  .end-bar .btn { flex: 1; }
+
+  /* Modal */
+  .overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,.65); backdrop-filter: blur(3px);
+    display: none; align-items: center; justify-content: center; padding: 16px; z-index: 50;
+  }
+  .overlay.open { display: flex; animation: fade .2s ease; }
+  @keyframes fade { from { opacity: 0; } to { opacity: 1; } }
+  .modal {
+    width: 100%; max-width: 420px; max-height: 90vh; overflow-y: auto;
+    background: var(--bg-2); border: 1px solid var(--line); border-radius: 18px; padding: 22px 20px 20px; position: relative;
+    animation: rise .25s ease;
+  }
+  @keyframes rise { from { transform: translateY(14px); opacity: 0; } to { transform: none; opacity: 1; } }
+  .modal h2 { margin: 0 0 14px; font-size: 19px; text-align: center; }
+  .modal h3 { font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin: 18px 0 10px; }
+  .close { position: absolute; top: 10px; right: 10px; border: 0; background: none; font-size: 22px; color: var(--muted); width: 34px; height: 34px; }
+  .modal p, .modal li { color: #c7d4cb; font-size: 14px; line-height: 1.55; }
+  .modal ul { padding-left: 18px; margin: 8px 0; }
+
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; text-align: center; }
+  .stats .n { font-size: 26px; font-weight: 800; }
+  .stats .l { font-size: 11px; color: var(--muted); line-height: 1.25; }
+  .dist { display: flex; flex-direction: column; gap: 5px; }
+  .dist .row { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+  .dist .k { width: 12px; color: var(--muted); font-weight: 700; }
+  .dist .bar {
+    min-width: 24px; height: 22px; border-radius: 5px; background: var(--gray);
+    display: flex; align-items: center; justify-content: flex-end; padding: 0 7px; font-weight: 700; font-size: 12px;
+    transition: width .5s ease;
+  }
+  .dist .bar.hl { background: var(--green); color: #06210f; }
+
+  .result-head { text-align: center; }
+  .result-head .big { font-size: 42px; }
+  .result-head .who { font-size: 22px; font-weight: 800; margin: 6px 0 2px; }
+  .result-head .sub { color: var(--muted); font-size: 13px; }
+  .share-pre {
+    background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px;
+    font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 14px; white-space: pre-wrap; margin: 14px 0 10px;
+  }
+  .row-btns { display: flex; gap: 8px; }
+  .row-btns .btn { flex: 1; }
+  .countdown { text-align: center; margin-top: 14px; color: var(--muted); font-size: 13px; }
+  .countdown b { display: block; font-size: 22px; color: var(--text); font-variant-numeric: tabular-nums; letter-spacing: 1px; }
+
+  .toast {
+    position: fixed; left: 50%; top: calc(18px + env(safe-area-inset-top, 0px)); transform: translateX(-50%) translateY(-80px);
+    background: var(--text); color: var(--bg); padding: 10px 16px; border-radius: 10px; font-weight: 700; font-size: 14px;
+    transition: transform .25s ease; z-index: 100;
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+
+  footer { text-align: center; color: var(--muted); font-size: 11.5px; margin-top: 26px; }
+
+  @media (max-width: 380px) {
+    .clue .val { font-size: 14.5px; }
+    .btn { padding: 0 12px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand">
+      <div class="logo">⚽</div>
+      <h1>Futbol Wordle<small>GÜNÜN FUTBOLCUSU</small></h1>
+    </div>
+    <div class="icons">
+      <button class="icon-btn" id="btnHelp" title="Nasıl oynanır?" aria-label="Nasıl oynanır">?</button>
+      <button class="icon-btn" id="btnStats" title="İstatistikler" aria-label="İstatistikler">📊</button>
+    </div>
+  </header>
+
+  <div class="tabs" role="tablist">
+    <button class="tab active" data-mode="daily">📅 Günlük</button>
+    <button class="tab" data-mode="free">🎲 Serbest mod</button>
+  </div>
+
+  <div class="diff-pick" id="diffPick" hidden>
+    <h2>Zorluk seç</h2>
+    <p>Serbest modda oynamadan önce nasıl oynamak istediğini seç.</p>
+    <div class="diff-cards">
+      <button class="diff-card" data-diff="kolay">
+        <span class="dname"><span class="dot"></span>Kolay</span>
+        <span class="ddesc">Oyuncunun kimlik bilgileri baştan açık.</span>
+        <ul><li>Milliyet, mevki ve doğum yılı görünür</li><li>Kulüpler her yanlışta açılır</li></ul>
+      </button>
+      <button class="diff-card hard" data-diff="zor">
+        <span class="dname"><span class="dot"></span>Zor</span>
+        <span class="ddesc">Sadece kariyer. Kimlik ipucu yok.</span>
+        <ul><li>Milliyet, mevki, doğum yılı hiç verilmez</li><li>Kulüpler her yanlışta açılır</li></ul>
+      </button>
+    </div>
+  </div>
+
+  <div class="game-area" id="gameArea">
+  <div class="filters" id="filters" hidden>
+    <div class="flabel-row">
+      <div class="flabel">Oyuncu havuzu</div>
+      <span class="diff-badge" id="diffBadge"></span>
+    </div>
+    <div class="chips" id="chips"></div>
+  </div>
+
+  <div class="meta">
+    <span id="metaLeft"></span>
+    <span id="metaRight"></span>
+  </div>
+
+  <div class="profile" id="profile" hidden></div>
+  <div class="clues" id="clues"></div>
+
+  <div class="guess-box" id="guessBox">
+    <div class="input-row">
+      <input id="guessInput" type="text" placeholder="Futbolcu adı yaz…" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+      <button class="btn" id="btnGuess">Tahmin</button>
+      <button class="btn ghost" id="btnPass" title="Pas geç (bir tahmin hakkı harcar)">Pas</button>
+    </div>
+    <div class="suggest" id="suggest"></div>
+    <div class="msg" id="msg"></div>
+  </div>
+
+  <div class="guesses" id="guesses"></div>
+
+  <div class="end-bar" id="endBar">
+    <button class="btn ghost" id="btnShowResult">Sonucu göster</button>
+    <button class="btn" id="btnNewFree">Yeni oyuncu</button>
+  </div>
+  </div>
+
+  <footer>Kariyer verisi kiralık dönemler hariç tutularak hazırlanmıştır.</footer>
+</div>
+
+<!-- Yardım -->
+<div class="overlay" id="helpModal">
+  <div class="modal">
+    <button class="close" data-close>×</button>
+    <h2>Nasıl oynanır?</h2>
+    <p>Gizli futbolcuyu <b>6 tahminde</b> bul.</p>
+    <ul>
+      <li>Başta yalnızca oyuncunun <b>ilk kulübü</b> görünür.</li>
+      <li>Her yanlış tahminde (veya pas geçtiğinde) kariyerindeki <b>bir sonraki kulüp</b> yıllarıyla açılır.</li>
+      <li>Kulüpler bitince sırayla <b>milliyet</b>, <b>mevki</b> ve <b>doğum yılı</b> açılır.</li>
+      <li>İsim yazarken öneriler çıkar; Türkçe karakter ve aksan fark etmez (“ozil” → Özil).</li>
+      <li>Kiralık dönemler kariyere dahil değildir.</li>
+    </ul>
+    <p><b>Günlük</b> modda herkes aynı gün aynı oyuncuyu görür ve istatistiklerin kaydedilir. <b>Serbest modda</b> sınırsız oynayabilirsin. Önce zorluk seçersin: <b>Kolay</b> modda milliyet, mevki ve doğum yılı baştan açıktır. <b>Zor</b> modda bunlar hiç verilmez, yalnızca kulüpler açılır. Oyuncu havuzunu da seçebilirsin: tüm oyuncular, beş büyük ligden biri, Süper Lig, Şampiyonlar Ligi şampiyonları, efsaneler ya da hâlâ oynayanlar.</p>
+  </div>
+</div>
+
+<!-- İstatistik -->
+<div class="overlay" id="statsModal">
+  <div class="modal">
+    <button class="close" data-close>×</button>
+    <h2>İstatistikler</h2>
+    <div class="stats" id="statsGrid"></div>
+    <h3>Tahmin dağılımı</h3>
+    <div class="dist" id="distChart"></div>
+    <p style="font-size:12px;color:var(--muted);margin-top:14px">İstatistikler yalnızca günlük oyunları kapsar ve bu tarayıcıda saklanır.</p>
+  </div>
+</div>
+
+<!-- Sonuç -->
+<div class="overlay" id="resultModal">
+  <div class="modal">
+    <button class="close" data-close>×</button>
+    <div class="result-head" id="resultHead"></div>
+    <div class="share-pre" id="sharePre"></div>
+    <div class="row-btns">
+      <button class="btn" id="btnCopy">📋 Kopyala</button>
+      <button class="btn ghost" id="btnResultAction"></button>
+    </div>
+    <div class="countdown" id="countdown"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* =====================================================================
+   OYUNCU VERİSİ
+   ---------------------------------------------------------------------
+   Yeni oyuncu eklemek için bu diziye bir nesne ekle:
+     isim     : Görünen ad (tahmin bu adla eşleşir)
+     milliyet : Türkçe ülke adı
+     mevki    : Kaleci | Defans | Orta saha | Kanat | Forvet
+     dogum    : Doğum yılı
+     kariyer  : Sırasıyla A takım kulüpleri { kulup, bas, bit }
+                bit: null => hâlâ o kulüpte
+   Kurallar: Kiralık dönemler YAZILMAZ. Altyapı / B takımı dönemleri yazılmaz.
+   Aktif oyuncuların güncel kulüpleri 2025 yaz transfer dönemi itibarıyladır.
+   Not: Günlük oyuncu sırası listenin uzunluğuna bağlıdır; liste değişirse
+   ileriki günlerin oyuncuları da değişir.
+   ===================================================================== */
+const OYUNCULAR = [
+  { isim: "Zlatan Ibrahimović", milliyet: "İsveç", mevki: "Forvet", dogum: 1981, kariyer: [
+    { kulup: "Malmö FF", bas: 1999, bit: 2001 },
+    { kulup: "Ajax", bas: 2001, bit: 2004 },
+    { kulup: "Juventus", bas: 2004, bit: 2006 },
+    { kulup: "Inter", bas: 2006, bit: 2009 },
+    { kulup: "Barcelona", bas: 2009, bit: 2010 },
+    { kulup: "Milan", bas: 2010, bit: 2012 },
+    { kulup: "Paris Saint-Germain", bas: 2012, bit: 2016 },
+    { kulup: "Manchester United", bas: 2016, bit: 2018 },
+    { kulup: "LA Galaxy", bas: 2018, bit: 2019 },
+    { kulup: "Milan", bas: 2020, bit: 2023 } ] },
+  { isim: "Cristiano Ronaldo", milliyet: "Portekiz", mevki: "Forvet", dogum: 1985, kariyer: [
+    { kulup: "Sporting CP", bas: 2002, bit: 2003 },
+    { kulup: "Manchester United", bas: 2003, bit: 2009 },
+    { kulup: "Real Madrid", bas: 2009, bit: 2018 },
+    { kulup: "Juventus", bas: 2018, bit: 2021 },
+    { kulup: "Manchester United", bas: 2021, bit: 2022 },
+    { kulup: "Al Nassr", bas: 2023, bit: null } ] },
+  { isim: "Lionel Messi", milliyet: "Arjantin", mevki: "Forvet", dogum: 1987, kariyer: [
+    { kulup: "Barcelona", bas: 2004, bit: 2021 },
+    { kulup: "Paris Saint-Germain", bas: 2021, bit: 2023 },
+    { kulup: "Inter Miami", bas: 2023, bit: null } ] },
+  { isim: "Thierry Henry", milliyet: "Fransa", mevki: "Forvet", dogum: 1977, kariyer: [
+    { kulup: "Monaco", bas: 1994, bit: 1999 },
+    { kulup: "Juventus", bas: 1999, bit: 1999 },
+    { kulup: "Arsenal", bas: 1999, bit: 2007 },
+    { kulup: "Barcelona", bas: 2007, bit: 2010 },
+    { kulup: "New York Red Bulls", bas: 2010, bit: 2014 } ] },
+  { isim: "David Beckham", milliyet: "İngiltere", mevki: "Orta saha", dogum: 1975, kariyer: [
+    { kulup: "Manchester United", bas: 1992, bit: 2003 },
+    { kulup: "Real Madrid", bas: 2003, bit: 2007 },
+    { kulup: "LA Galaxy", bas: 2007, bit: 2012 },
+    { kulup: "Paris Saint-Germain", bas: 2013, bit: 2013 } ] },
+  { isim: "Ronaldo Nazário", milliyet: "Brezilya", mevki: "Forvet", dogum: 1976, kariyer: [
+    { kulup: "Cruzeiro", bas: 1993, bit: 1994 },
+    { kulup: "PSV", bas: 1994, bit: 1996 },
+    { kulup: "Barcelona", bas: 1996, bit: 1997 },
+    { kulup: "Inter", bas: 1997, bit: 2002 },
+    { kulup: "Real Madrid", bas: 2002, bit: 2007 },
+    { kulup: "Milan", bas: 2007, bit: 2008 },
+    { kulup: "Corinthians", bas: 2009, bit: 2011 } ] },
+  { isim: "Ronaldinho", milliyet: "Brezilya", mevki: "Orta saha", dogum: 1980, kariyer: [
+    { kulup: "Grêmio", bas: 1998, bit: 2001 },
+    { kulup: "Paris Saint-Germain", bas: 2001, bit: 2003 },
+    { kulup: "Barcelona", bas: 2003, bit: 2008 },
+    { kulup: "Milan", bas: 2008, bit: 2011 },
+    { kulup: "Flamengo", bas: 2011, bit: 2012 },
+    { kulup: "Atlético Mineiro", bas: 2012, bit: 2014 },
+    { kulup: "Querétaro", bas: 2014, bit: 2015 },
+    { kulup: "Fluminense", bas: 2015, bit: 2015 } ] },
+  { isim: "Andrea Pirlo", milliyet: "İtalya", mevki: "Orta saha", dogum: 1979, kariyer: [
+    { kulup: "Brescia", bas: 1995, bit: 1998 },
+    { kulup: "Inter", bas: 1998, bit: 2001 },
+    { kulup: "Milan", bas: 2001, bit: 2011 },
+    { kulup: "Juventus", bas: 2011, bit: 2015 },
+    { kulup: "New York City FC", bas: 2015, bit: 2017 } ] },
+  { isim: "Fernando Torres", milliyet: "İspanya", mevki: "Forvet", dogum: 1984, kariyer: [
+    { kulup: "Atlético Madrid", bas: 2001, bit: 2007 },
+    { kulup: "Liverpool", bas: 2007, bit: 2011 },
+    { kulup: "Chelsea", bas: 2011, bit: 2014 },
+    { kulup: "Atlético Madrid", bas: 2015, bit: 2018 },
+    { kulup: "Sagan Tosu", bas: 2018, bit: 2019 } ] },
+  { isim: "Wesley Sneijder", milliyet: "Hollanda", mevki: "Orta saha", dogum: 1984, kariyer: [
+    { kulup: "Ajax", bas: 2002, bit: 2007 },
+    { kulup: "Real Madrid", bas: 2007, bit: 2009 },
+    { kulup: "Inter", bas: 2009, bit: 2013 },
+    { kulup: "Galatasaray", bas: 2013, bit: 2017 },
+    { kulup: "Nice", bas: 2017, bit: 2018 },
+    { kulup: "Al-Gharafa", bas: 2018, bit: 2019 } ] },
+  { isim: "Didier Drogba", milliyet: "Fildişi Sahili", mevki: "Forvet", dogum: 1978, kariyer: [
+    { kulup: "Le Mans", bas: 1998, bit: 2002 },
+    { kulup: "Guingamp", bas: 2002, bit: 2003 },
+    { kulup: "Marseille", bas: 2003, bit: 2004 },
+    { kulup: "Chelsea", bas: 2004, bit: 2012 },
+    { kulup: "Shanghai Shenhua", bas: 2012, bit: 2013 },
+    { kulup: "Galatasaray", bas: 2013, bit: 2014 },
+    { kulup: "Chelsea", bas: 2014, bit: 2015 },
+    { kulup: "Montreal Impact", bas: 2015, bit: 2016 },
+    { kulup: "Phoenix Rising", bas: 2017, bit: 2018 } ] },
+  { isim: "Arda Turan", milliyet: "Türkiye", mevki: "Orta saha", dogum: 1987, kariyer: [
+    { kulup: "Galatasaray", bas: 2005, bit: 2011 },
+    { kulup: "Atlético Madrid", bas: 2011, bit: 2015 },
+    { kulup: "Barcelona", bas: 2015, bit: 2020 },
+    { kulup: "Galatasaray", bas: 2020, bit: 2022 } ] },
+  { isim: "Hakan Şükür", milliyet: "Türkiye", mevki: "Forvet", dogum: 1971, kariyer: [
+    { kulup: "Sakaryaspor", bas: 1987, bit: 1990 },
+    { kulup: "Bursaspor", bas: 1990, bit: 1992 },
+    { kulup: "Galatasaray", bas: 1992, bit: 1995 },
+    { kulup: "Torino", bas: 1995, bit: 1995 },
+    { kulup: "Galatasaray", bas: 1995, bit: 2000 },
+    { kulup: "Inter", bas: 2000, bit: 2001 },
+    { kulup: "Parma", bas: 2001, bit: 2002 },
+    { kulup: "Blackburn Rovers", bas: 2002, bit: 2003 },
+    { kulup: "Galatasaray", bas: 2003, bit: 2008 } ] },
+  { isim: "Nihat Kahveci", milliyet: "Türkiye", mevki: "Forvet", dogum: 1979, kariyer: [
+    { kulup: "Beşiktaş", bas: 1997, bit: 2002 },
+    { kulup: "Real Sociedad", bas: 2002, bit: 2006 },
+    { kulup: "Villarreal", bas: 2006, bit: 2009 },
+    { kulup: "Beşiktaş", bas: 2009, bit: 2011 } ] },
+  { isim: "Emre Belözoğlu", milliyet: "Türkiye", mevki: "Orta saha", dogum: 1980, kariyer: [
+    { kulup: "Galatasaray", bas: 1996, bit: 2001 },
+    { kulup: "Inter", bas: 2001, bit: 2005 },
+    { kulup: "Newcastle United", bas: 2005, bit: 2008 },
+    { kulup: "Fenerbahçe", bas: 2008, bit: 2012 },
+    { kulup: "Atlético Madrid", bas: 2012, bit: 2013 },
+    { kulup: "Fenerbahçe", bas: 2013, bit: 2015 },
+    { kulup: "İstanbul Başakşehir", bas: 2015, bit: 2019 },
+    { kulup: "Fenerbahçe", bas: 2019, bit: 2020 } ] },
+  { isim: "Mesut Özil", milliyet: "Almanya", mevki: "Orta saha", dogum: 1988, kariyer: [
+    { kulup: "Schalke 04", bas: 2006, bit: 2008 },
+    { kulup: "Werder Bremen", bas: 2008, bit: 2010 },
+    { kulup: "Real Madrid", bas: 2010, bit: 2013 },
+    { kulup: "Arsenal", bas: 2013, bit: 2021 },
+    { kulup: "Fenerbahçe", bas: 2021, bit: 2022 },
+    { kulup: "İstanbul Başakşehir", bas: 2022, bit: 2023 } ] },
+  { isim: "Tugay Kerimoğlu", milliyet: "Türkiye", mevki: "Orta saha", dogum: 1970, kariyer: [
+    { kulup: "Galatasaray", bas: 1987, bit: 2000 },
+    { kulup: "Rangers", bas: 2000, bit: 2001 },
+    { kulup: "Blackburn Rovers", bas: 2001, bit: 2009 } ] },
+  { isim: "Hamit Altıntop", milliyet: "Türkiye", mevki: "Orta saha", dogum: 1982, kariyer: [
+    { kulup: "Wattenscheid 09", bas: 2000, bit: 2003 },
+    { kulup: "Schalke 04", bas: 2003, bit: 2007 },
+    { kulup: "Bayern Münih", bas: 2007, bit: 2011 },
+    { kulup: "Real Madrid", bas: 2011, bit: 2012 },
+    { kulup: "Galatasaray", bas: 2012, bit: 2015 },
+    { kulup: "Darmstadt 98", bas: 2015, bit: 2017 } ] },
+  { isim: "Gheorghe Hagi", milliyet: "Romanya", mevki: "Orta saha", dogum: 1965, kariyer: [
+    { kulup: "Farul Constanța", bas: 1982, bit: 1983 },
+    { kulup: "Sportul Studențesc", bas: 1983, bit: 1987 },
+    { kulup: "Steaua Bükreş", bas: 1987, bit: 1990 },
+    { kulup: "Real Madrid", bas: 1990, bit: 1992 },
+    { kulup: "Brescia", bas: 1992, bit: 1994 },
+    { kulup: "Barcelona", bas: 1994, bit: 1996 },
+    { kulup: "Galatasaray", bas: 1996, bit: 2001 } ] },
+  { isim: "Roberto Carlos", milliyet: "Brezilya", mevki: "Defans", dogum: 1973, kariyer: [
+    { kulup: "União São João", bas: 1991, bit: 1993 },
+    { kulup: "Palmeiras", bas: 1993, bit: 1995 },
+    { kulup: "Inter", bas: 1995, bit: 1996 },
+    { kulup: "Real Madrid", bas: 1996, bit: 2007 },
+    { kulup: "Fenerbahçe", bas: 2007, bit: 2009 },
+    { kulup: "Corinthians", bas: 2010, bit: 2011 },
+    { kulup: "Anzhi Makhachkala", bas: 2011, bit: 2012 } ] },
+  { isim: "Zinedine Zidane", milliyet: "Fransa", mevki: "Orta saha", dogum: 1972, kariyer: [
+    { kulup: "Cannes", bas: 1989, bit: 1992 },
+    { kulup: "Bordeaux", bas: 1992, bit: 1996 },
+    { kulup: "Juventus", bas: 1996, bit: 2001 },
+    { kulup: "Real Madrid", bas: 2001, bit: 2006 } ] },
+  { isim: "Luís Figo", milliyet: "Portekiz", mevki: "Kanat", dogum: 1972, kariyer: [
+    { kulup: "Sporting CP", bas: 1989, bit: 1995 },
+    { kulup: "Barcelona", bas: 1995, bit: 2000 },
+    { kulup: "Real Madrid", bas: 2000, bit: 2005 },
+    { kulup: "Inter", bas: 2005, bit: 2009 } ] },
+  { isim: "Kaká", milliyet: "Brezilya", mevki: "Orta saha", dogum: 1982, kariyer: [
+    { kulup: "São Paulo", bas: 2001, bit: 2003 },
+    { kulup: "Milan", bas: 2003, bit: 2009 },
+    { kulup: "Real Madrid", bas: 2009, bit: 2013 },
+    { kulup: "Milan", bas: 2013, bit: 2014 },
+    { kulup: "Orlando City", bas: 2014, bit: 2017 } ] },
+  { isim: "Andriy Shevchenko", milliyet: "Ukrayna", mevki: "Forvet", dogum: 1976, kariyer: [
+    { kulup: "Dinamo Kiev", bas: 1994, bit: 1999 },
+    { kulup: "Milan", bas: 1999, bit: 2006 },
+    { kulup: "Chelsea", bas: 2006, bit: 2009 },
+    { kulup: "Dinamo Kiev", bas: 2009, bit: 2012 } ] },
+  { isim: "Gianluigi Buffon", milliyet: "İtalya", mevki: "Kaleci", dogum: 1978, kariyer: [
+    { kulup: "Parma", bas: 1995, bit: 2001 },
+    { kulup: "Juventus", bas: 2001, bit: 2018 },
+    { kulup: "Paris Saint-Germain", bas: 2018, bit: 2019 },
+    { kulup: "Juventus", bas: 2019, bit: 2021 },
+    { kulup: "Parma", bas: 2021, bit: 2023 } ] },
+  { isim: "Neymar", milliyet: "Brezilya", mevki: "Forvet", dogum: 1992, kariyer: [
+    { kulup: "Santos", bas: 2009, bit: 2013 },
+    { kulup: "Barcelona", bas: 2013, bit: 2017 },
+    { kulup: "Paris Saint-Germain", bas: 2017, bit: 2023 },
+    { kulup: "Al Hilal", bas: 2023, bit: 2025 },
+    { kulup: "Santos", bas: 2025, bit: null } ] },
+  { isim: "Luis Suárez", milliyet: "Uruguay", mevki: "Forvet", dogum: 1987, kariyer: [
+    { kulup: "Nacional", bas: 2005, bit: 2006 },
+    { kulup: "Groningen", bas: 2006, bit: 2007 },
+    { kulup: "Ajax", bas: 2007, bit: 2011 },
+    { kulup: "Liverpool", bas: 2011, bit: 2014 },
+    { kulup: "Barcelona", bas: 2014, bit: 2020 },
+    { kulup: "Atlético Madrid", bas: 2020, bit: 2022 },
+    { kulup: "Nacional", bas: 2022, bit: 2022 },
+    { kulup: "Grêmio", bas: 2023, bit: 2023 },
+    { kulup: "Inter Miami", bas: 2024, bit: null } ] },
+  { isim: "Antoine Griezmann", milliyet: "Fransa", mevki: "Forvet", dogum: 1991, kariyer: [
+    { kulup: "Real Sociedad", bas: 2009, bit: 2014 },
+    { kulup: "Atlético Madrid", bas: 2014, bit: 2019 },
+    { kulup: "Barcelona", bas: 2019, bit: 2021 },
+    { kulup: "Atlético Madrid", bas: 2021, bit: null } ] },
+  { isim: "Karim Benzema", milliyet: "Fransa", mevki: "Forvet", dogum: 1987, kariyer: [
+    { kulup: "Lyon", bas: 2004, bit: 2009 },
+    { kulup: "Real Madrid", bas: 2009, bit: 2023 },
+    { kulup: "Al Ittihad", bas: 2023, bit: null } ] },
+  { isim: "Kevin De Bruyne", milliyet: "Belçika", mevki: "Orta saha", dogum: 1991, kariyer: [
+    { kulup: "Genk", bas: 2008, bit: 2012 },
+    { kulup: "Chelsea", bas: 2012, bit: 2014 },
+    { kulup: "Wolfsburg", bas: 2014, bit: 2015 },
+    { kulup: "Manchester City", bas: 2015, bit: 2025 },
+    { kulup: "Napoli", bas: 2025, bit: null } ] },
+  { isim: "Luka Modrić", milliyet: "Hırvatistan", mevki: "Orta saha", dogum: 1985, kariyer: [
+    { kulup: "Dinamo Zagreb", bas: 2003, bit: 2008 },
+    { kulup: "Tottenham Hotspur", bas: 2008, bit: 2012 },
+    { kulup: "Real Madrid", bas: 2012, bit: 2025 },
+    { kulup: "Milan", bas: 2025, bit: null } ] },
+  { isim: "Eden Hazard", milliyet: "Belçika", mevki: "Kanat", dogum: 1991, kariyer: [
+    { kulup: "Lille", bas: 2007, bit: 2012 },
+    { kulup: "Chelsea", bas: 2012, bit: 2019 },
+    { kulup: "Real Madrid", bas: 2019, bit: 2023 } ] },
+  { isim: "Mohamed Salah", milliyet: "Mısır", mevki: "Kanat", dogum: 1992, kariyer: [
+    { kulup: "El Mokawloon", bas: 2010, bit: 2012 },
+    { kulup: "Basel", bas: 2012, bit: 2014 },
+    { kulup: "Chelsea", bas: 2014, bit: 2016 },
+    { kulup: "Roma", bas: 2016, bit: 2017 },
+    { kulup: "Liverpool", bas: 2017, bit: null } ] },
+  { isim: "Erling Haaland", milliyet: "Norveç", mevki: "Forvet", dogum: 2000, kariyer: [
+    { kulup: "Bryne", bas: 2016, bit: 2017 },
+    { kulup: "Molde", bas: 2017, bit: 2018 },
+    { kulup: "Red Bull Salzburg", bas: 2019, bit: 2020 },
+    { kulup: "Borussia Dortmund", bas: 2020, bit: 2022 },
+    { kulup: "Manchester City", bas: 2022, bit: null } ] },
+  { isim: "Kylian Mbappé", milliyet: "Fransa", mevki: "Forvet", dogum: 1998, kariyer: [
+    { kulup: "Monaco", bas: 2015, bit: 2017 },
+    { kulup: "Paris Saint-Germain", bas: 2017, bit: 2024 },
+    { kulup: "Real Madrid", bas: 2024, bit: null } ] },
+  { isim: "Romelu Lukaku", milliyet: "Belçika", mevki: "Forvet", dogum: 1993, kariyer: [
+    { kulup: "Anderlecht", bas: 2009, bit: 2011 },
+    { kulup: "Chelsea", bas: 2011, bit: 2014 },
+    { kulup: "Everton", bas: 2014, bit: 2017 },
+    { kulup: "Manchester United", bas: 2017, bit: 2019 },
+    { kulup: "Inter", bas: 2019, bit: 2021 },
+    { kulup: "Chelsea", bas: 2021, bit: 2024 },
+    { kulup: "Napoli", bas: 2024, bit: null } ] },
+  { isim: "Edin Džeko", milliyet: "Bosna-Hersek", mevki: "Forvet", dogum: 1986, kariyer: [
+    { kulup: "Željezničar", bas: 2003, bit: 2005 },
+    { kulup: "Teplice", bas: 2005, bit: 2007 },
+    { kulup: "Wolfsburg", bas: 2007, bit: 2011 },
+    { kulup: "Manchester City", bas: 2011, bit: 2015 },
+    { kulup: "Roma", bas: 2015, bit: 2021 },
+    { kulup: "Inter", bas: 2021, bit: 2023 },
+    { kulup: "Fenerbahçe", bas: 2023, bit: 2025 },
+    { kulup: "Fiorentina", bas: 2025, bit: null } ] },
+  { isim: "Dries Mertens", milliyet: "Belçika", mevki: "Forvet", dogum: 1987, kariyer: [
+    { kulup: "AGOVV Apeldoorn", bas: 2007, bit: 2009 },
+    { kulup: "Utrecht", bas: 2009, bit: 2011 },
+    { kulup: "PSV", bas: 2011, bit: 2013 },
+    { kulup: "Napoli", bas: 2013, bit: 2022 },
+    { kulup: "Galatasaray", bas: 2022, bit: 2025 } ] },
+  { isim: "Mauro Icardi", milliyet: "Arjantin", mevki: "Forvet", dogum: 1993, kariyer: [
+    { kulup: "Sampdoria", bas: 2011, bit: 2013 },
+    { kulup: "Inter", bas: 2013, bit: 2019 },
+    { kulup: "Paris Saint-Germain", bas: 2019, bit: 2023 },
+    { kulup: "Galatasaray", bas: 2023, bit: null } ] },
+  { isim: "Victor Osimhen", milliyet: "Nijerya", mevki: "Forvet", dogum: 1998, kariyer: [
+    { kulup: "Wolfsburg", bas: 2017, bit: 2018 },
+    { kulup: "Charleroi", bas: 2018, bit: 2019 },
+    { kulup: "Lille", bas: 2019, bit: 2020 },
+    { kulup: "Napoli", bas: 2020, bit: 2025 },
+    { kulup: "Galatasaray", bas: 2025, bit: null } ] },
+  { isim: "Ángel Di María", milliyet: "Arjantin", mevki: "Kanat", dogum: 1988, kariyer: [
+    { kulup: "Rosario Central", bas: 2005, bit: 2007 },
+    { kulup: "Benfica", bas: 2007, bit: 2010 },
+    { kulup: "Real Madrid", bas: 2010, bit: 2014 },
+    { kulup: "Manchester United", bas: 2014, bit: 2015 },
+    { kulup: "Paris Saint-Germain", bas: 2015, bit: 2022 },
+    { kulup: "Juventus", bas: 2022, bit: 2023 },
+    { kulup: "Benfica", bas: 2023, bit: 2025 },
+    { kulup: "Rosario Central", bas: 2025, bit: null } ] },
+  { isim: "Gonzalo Higuaín", milliyet: "Arjantin", mevki: "Forvet", dogum: 1987, kariyer: [
+    { kulup: "River Plate", bas: 2005, bit: 2007 },
+    { kulup: "Real Madrid", bas: 2007, bit: 2013 },
+    { kulup: "Napoli", bas: 2013, bit: 2016 },
+    { kulup: "Juventus", bas: 2016, bit: 2020 },
+    { kulup: "Inter Miami", bas: 2020, bit: 2022 } ] },
+  { isim: "Sergio Agüero", milliyet: "Arjantin", mevki: "Forvet", dogum: 1988, kariyer: [
+    { kulup: "Independiente", bas: 2003, bit: 2006 },
+    { kulup: "Atlético Madrid", bas: 2006, bit: 2011 },
+    { kulup: "Manchester City", bas: 2011, bit: 2021 },
+    { kulup: "Barcelona", bas: 2021, bit: 2021 } ] },
+  { isim: "Xabi Alonso", milliyet: "İspanya", mevki: "Orta saha", dogum: 1981, kariyer: [
+    { kulup: "Real Sociedad", bas: 1999, bit: 2004 },
+    { kulup: "Liverpool", bas: 2004, bit: 2009 },
+    { kulup: "Real Madrid", bas: 2009, bit: 2014 },
+    { kulup: "Bayern Münih", bas: 2014, bit: 2017 } ] },
+  { isim: "Cesc Fàbregas", milliyet: "İspanya", mevki: "Orta saha", dogum: 1987, kariyer: [
+    { kulup: "Arsenal", bas: 2003, bit: 2011 },
+    { kulup: "Barcelona", bas: 2011, bit: 2014 },
+    { kulup: "Chelsea", bas: 2014, bit: 2019 },
+    { kulup: "Monaco", bas: 2019, bit: 2022 },
+    { kulup: "Como", bas: 2022, bit: 2023 } ] },
+  { isim: "David Villa", milliyet: "İspanya", mevki: "Forvet", dogum: 1981, kariyer: [
+    { kulup: "Sporting Gijón", bas: 2000, bit: 2003 },
+    { kulup: "Real Zaragoza", bas: 2003, bit: 2005 },
+    { kulup: "Valencia", bas: 2005, bit: 2010 },
+    { kulup: "Barcelona", bas: 2010, bit: 2013 },
+    { kulup: "Atlético Madrid", bas: 2013, bit: 2014 },
+    { kulup: "New York City FC", bas: 2014, bit: 2018 },
+    { kulup: "Vissel Kobe", bas: 2019, bit: 2019 } ] },
+  { isim: "Arjen Robben", milliyet: "Hollanda", mevki: "Kanat", dogum: 1984, kariyer: [
+    { kulup: "Groningen", bas: 2000, bit: 2002 },
+    { kulup: "PSV", bas: 2002, bit: 2004 },
+    { kulup: "Chelsea", bas: 2004, bit: 2007 },
+    { kulup: "Real Madrid", bas: 2007, bit: 2009 },
+    { kulup: "Bayern Münih", bas: 2009, bit: 2019 },
+    { kulup: "Groningen", bas: 2020, bit: 2021 } ] },
+  { isim: "Robin van Persie", milliyet: "Hollanda", mevki: "Forvet", dogum: 1983, kariyer: [
+    { kulup: "Feyenoord", bas: 2001, bit: 2004 },
+    { kulup: "Arsenal", bas: 2004, bit: 2012 },
+    { kulup: "Manchester United", bas: 2012, bit: 2015 },
+    { kulup: "Fenerbahçe", bas: 2015, bit: 2018 },
+    { kulup: "Feyenoord", bas: 2018, bit: 2019 } ] },
+  { isim: "Clarence Seedorf", milliyet: "Hollanda", mevki: "Orta saha", dogum: 1976, kariyer: [
+    { kulup: "Ajax", bas: 1992, bit: 1995 },
+    { kulup: "Sampdoria", bas: 1995, bit: 1996 },
+    { kulup: "Real Madrid", bas: 1996, bit: 2000 },
+    { kulup: "Inter", bas: 2000, bit: 2002 },
+    { kulup: "Milan", bas: 2002, bit: 2012 },
+    { kulup: "Botafogo", bas: 2012, bit: 2014 } ] },
+  { isim: "Patrick Kluivert", milliyet: "Hollanda", mevki: "Forvet", dogum: 1976, kariyer: [
+    { kulup: "Ajax", bas: 1994, bit: 1997 },
+    { kulup: "Milan", bas: 1997, bit: 1998 },
+    { kulup: "Barcelona", bas: 1998, bit: 2004 },
+    { kulup: "Newcastle United", bas: 2004, bit: 2005 },
+    { kulup: "Valencia", bas: 2005, bit: 2006 },
+    { kulup: "PSV", bas: 2006, bit: 2007 },
+    { kulup: "Lille", bas: 2007, bit: 2008 } ] },
+  { isim: "Ruud van Nistelrooy", milliyet: "Hollanda", mevki: "Forvet", dogum: 1976, kariyer: [
+    { kulup: "Den Bosch", bas: 1993, bit: 1997 },
+    { kulup: "Heerenveen", bas: 1997, bit: 1998 },
+    { kulup: "PSV", bas: 1998, bit: 2001 },
+    { kulup: "Manchester United", bas: 2001, bit: 2006 },
+    { kulup: "Real Madrid", bas: 2006, bit: 2010 },
+    { kulup: "Hamburg", bas: 2010, bit: 2011 },
+    { kulup: "Málaga", bas: 2011, bit: 2012 } ] },
+  { isim: "Nicolas Anelka", milliyet: "Fransa", mevki: "Forvet", dogum: 1979, kariyer: [
+    { kulup: "Paris Saint-Germain", bas: 1996, bit: 1997 },
+    { kulup: "Arsenal", bas: 1997, bit: 1999 },
+    { kulup: "Real Madrid", bas: 1999, bit: 2000 },
+    { kulup: "Paris Saint-Germain", bas: 2000, bit: 2002 },
+    { kulup: "Manchester City", bas: 2002, bit: 2005 },
+    { kulup: "Fenerbahçe", bas: 2005, bit: 2006 },
+    { kulup: "Bolton Wanderers", bas: 2006, bit: 2008 },
+    { kulup: "Chelsea", bas: 2008, bit: 2012 },
+    { kulup: "Shanghai Shenhua", bas: 2012, bit: 2013 },
+    { kulup: "West Bromwich Albion", bas: 2013, bit: 2014 },
+    { kulup: "Mumbai City", bas: 2014, bit: 2015 } ] },
+  { isim: "Franck Ribéry", milliyet: "Fransa", mevki: "Kanat", dogum: 1983, kariyer: [
+    { kulup: "Boulogne", bas: 2000, bit: 2002 },
+    { kulup: "Alès", bas: 2002, bit: 2003 },
+    { kulup: "Brest", bas: 2003, bit: 2004 },
+    { kulup: "Metz", bas: 2004, bit: 2005 },
+    { kulup: "Galatasaray", bas: 2005, bit: 2005 },
+    { kulup: "Marseille", bas: 2005, bit: 2007 },
+    { kulup: "Bayern Münih", bas: 2007, bit: 2019 },
+    { kulup: "Fiorentina", bas: 2019, bit: 2021 },
+    { kulup: "Salernitana", bas: 2021, bit: 2022 } ] },
+  { isim: "Diego Maradona", milliyet: "Arjantin", mevki: "Orta saha", dogum: 1960, kariyer: [
+    { kulup: "Argentinos Juniors", bas: 1976, bit: 1981 },
+    { kulup: "Barcelona", bas: 1982, bit: 1984 },
+    { kulup: "Napoli", bas: 1984, bit: 1991 },
+    { kulup: "Sevilla", bas: 1992, bit: 1993 },
+    { kulup: "Newell's Old Boys", bas: 1993, bit: 1994 },
+    { kulup: "Boca Juniors", bas: 1995, bit: 1997 } ] },
+  { isim: "Michael Owen", milliyet: "İngiltere", mevki: "Forvet", dogum: 1979, kariyer: [
+    { kulup: "Liverpool", bas: 1996, bit: 2004 },
+    { kulup: "Real Madrid", bas: 2004, bit: 2005 },
+    { kulup: "Newcastle United", bas: 2005, bit: 2009 },
+    { kulup: "Manchester United", bas: 2009, bit: 2012 },
+    { kulup: "Stoke City", bas: 2012, bit: 2013 } ] },
+  { isim: "Wayne Rooney", milliyet: "İngiltere", mevki: "Forvet", dogum: 1985, kariyer: [
+    { kulup: "Everton", bas: 2002, bit: 2004 },
+    { kulup: "Manchester United", bas: 2004, bit: 2017 },
+    { kulup: "Everton", bas: 2017, bit: 2018 },
+    { kulup: "DC United", bas: 2018, bit: 2020 },
+    { kulup: "Derby County", bas: 2020, bit: 2021 } ] },
+  { isim: "Frank Lampard", milliyet: "İngiltere", mevki: "Orta saha", dogum: 1978, kariyer: [
+    { kulup: "West Ham United", bas: 1995, bit: 2001 },
+    { kulup: "Chelsea", bas: 2001, bit: 2014 },
+    { kulup: "New York City FC", bas: 2014, bit: 2016 } ] },
+  { isim: "Gareth Bale", milliyet: "Galler", mevki: "Kanat", dogum: 1989, kariyer: [
+    { kulup: "Southampton", bas: 2006, bit: 2007 },
+    { kulup: "Tottenham Hotspur", bas: 2007, bit: 2013 },
+    { kulup: "Real Madrid", bas: 2013, bit: 2022 },
+    { kulup: "Los Angeles FC", bas: 2022, bit: 2022 } ] },
+  { isim: "Alexis Sánchez", milliyet: "Şili", mevki: "Forvet", dogum: 1988, kariyer: [
+    { kulup: "Cobreloa", bas: 2005, bit: 2006 },
+    { kulup: "Udinese", bas: 2006, bit: 2011 },
+    { kulup: "Barcelona", bas: 2011, bit: 2014 },
+    { kulup: "Arsenal", bas: 2014, bit: 2018 },
+    { kulup: "Manchester United", bas: 2018, bit: 2020 },
+    { kulup: "Inter", bas: 2020, bit: 2022 },
+    { kulup: "Marseille", bas: 2022, bit: 2023 },
+    { kulup: "Inter", bas: 2023, bit: 2024 },
+    { kulup: "Udinese", bas: 2024, bit: 2025 },
+    { kulup: "Sevilla", bas: 2025, bit: null } ] },
+  { isim: "Ricardo Quaresma", milliyet: "Portekiz", mevki: "Kanat", dogum: 1983, kariyer: [
+    { kulup: "Sporting CP", bas: 2001, bit: 2003 },
+    { kulup: "Barcelona", bas: 2003, bit: 2004 },
+    { kulup: "Porto", bas: 2004, bit: 2008 },
+    { kulup: "Inter", bas: 2008, bit: 2010 },
+    { kulup: "Beşiktaş", bas: 2010, bit: 2012 },
+    { kulup: "Al Ahli (Dubai)", bas: 2012, bit: 2013 },
+    { kulup: "Porto", bas: 2014, bit: 2015 },
+    { kulup: "Beşiktaş", bas: 2015, bit: 2019 },
+    { kulup: "Kasımpaşa", bas: 2019, bit: 2020 },
+    { kulup: "Vitória Guimarães", bas: 2020, bit: 2021 } ] },
+  { isim: "Pepe", milliyet: "Portekiz", mevki: "Defans", dogum: 1983, kariyer: [
+    { kulup: "Marítimo", bas: 2002, bit: 2004 },
+    { kulup: "Porto", bas: 2004, bit: 2007 },
+    { kulup: "Real Madrid", bas: 2007, bit: 2017 },
+    { kulup: "Beşiktaş", bas: 2017, bit: 2018 },
+    { kulup: "Porto", bas: 2019, bit: 2024 } ] },
+  { isim: "Mario Gómez", milliyet: "Almanya", mevki: "Forvet", dogum: 1985, kariyer: [
+    { kulup: "Stuttgart", bas: 2003, bit: 2009 },
+    { kulup: "Bayern Münih", bas: 2009, bit: 2013 },
+    { kulup: "Fiorentina", bas: 2013, bit: 2016 },
+    { kulup: "Wolfsburg", bas: 2016, bit: 2018 },
+    { kulup: "Stuttgart", bas: 2018, bit: 2020 } ] },
+  { isim: "Lukas Podolski", milliyet: "Almanya", mevki: "Forvet", dogum: 1985, kariyer: [
+    { kulup: "1. FC Köln", bas: 2003, bit: 2006 },
+    { kulup: "Bayern Münih", bas: 2006, bit: 2009 },
+    { kulup: "1. FC Köln", bas: 2009, bit: 2012 },
+    { kulup: "Arsenal", bas: 2012, bit: 2015 },
+    { kulup: "Galatasaray", bas: 2015, bit: 2017 },
+    { kulup: "Vissel Kobe", bas: 2017, bit: 2019 },
+    { kulup: "Antalyaspor", bas: 2020, bit: 2021 },
+    { kulup: "Górnik Zabrze", bas: 2021, bit: null } ] },
+  { isim: "Michael Ballack", milliyet: "Almanya", mevki: "Orta saha", dogum: 1976, kariyer: [
+    { kulup: "Chemnitzer FC", bas: 1995, bit: 1997 },
+    { kulup: "Kaiserslautern", bas: 1997, bit: 1999 },
+    { kulup: "Bayer Leverkusen", bas: 1999, bit: 2002 },
+    { kulup: "Bayern Münih", bas: 2002, bit: 2006 },
+    { kulup: "Chelsea", bas: 2006, bit: 2010 },
+    { kulup: "Bayer Leverkusen", bas: 2010, bit: 2012 } ] },
+  { isim: "Bastian Schweinsteiger", milliyet: "Almanya", mevki: "Orta saha", dogum: 1984, kariyer: [
+    { kulup: "Bayern Münih", bas: 2002, bit: 2015 },
+    { kulup: "Manchester United", bas: 2015, bit: 2017 },
+    { kulup: "Chicago Fire", bas: 2017, bit: 2019 } ] },
+  { isim: "İlkay Gündoğan", milliyet: "Almanya", mevki: "Orta saha", dogum: 1990, kariyer: [
+    { kulup: "Bochum", bas: 2008, bit: 2009 },
+    { kulup: "Nürnberg", bas: 2009, bit: 2011 },
+    { kulup: "Borussia Dortmund", bas: 2011, bit: 2016 },
+    { kulup: "Manchester City", bas: 2016, bit: 2023 },
+    { kulup: "Barcelona", bas: 2023, bit: 2024 },
+    { kulup: "Manchester City", bas: 2024, bit: 2025 },
+    { kulup: "Galatasaray", bas: 2025, bit: null } ] },
+  { isim: "Leroy Sané", milliyet: "Almanya", mevki: "Kanat", dogum: 1996, kariyer: [
+    { kulup: "Schalke 04", bas: 2014, bit: 2016 },
+    { kulup: "Manchester City", bas: 2016, bit: 2020 },
+    { kulup: "Bayern Münih", bas: 2020, bit: 2025 },
+    { kulup: "Galatasaray", bas: 2025, bit: null } ] },
+  { isim: "Paul Pogba", milliyet: "Fransa", mevki: "Orta saha", dogum: 1993, kariyer: [
+    { kulup: "Manchester United", bas: 2011, bit: 2012 },
+    { kulup: "Juventus", bas: 2012, bit: 2016 },
+    { kulup: "Manchester United", bas: 2016, bit: 2022 },
+    { kulup: "Juventus", bas: 2022, bit: 2024 },
+    { kulup: "Monaco", bas: 2025, bit: null } ] },
+  { isim: "N'Golo Kanté", milliyet: "Fransa", mevki: "Orta saha", dogum: 1991, kariyer: [
+    { kulup: "Boulogne", bas: 2011, bit: 2013 },
+    { kulup: "Caen", bas: 2013, bit: 2015 },
+    { kulup: "Leicester City", bas: 2015, bit: 2016 },
+    { kulup: "Chelsea", bas: 2016, bit: 2023 },
+    { kulup: "Al Ittihad", bas: 2023, bit: null } ] },
+  { isim: "Olivier Giroud", milliyet: "Fransa", mevki: "Forvet", dogum: 1986, kariyer: [
+    { kulup: "Grenoble", bas: 2005, bit: 2008 },
+    { kulup: "Tours", bas: 2008, bit: 2010 },
+    { kulup: "Montpellier", bas: 2010, bit: 2012 },
+    { kulup: "Arsenal", bas: 2012, bit: 2018 },
+    { kulup: "Chelsea", bas: 2018, bit: 2021 },
+    { kulup: "Milan", bas: 2021, bit: 2024 },
+    { kulup: "Los Angeles FC", bas: 2024, bit: 2025 },
+    { kulup: "Lille", bas: 2025, bit: null } ] },
+  { isim: "Ivan Rakitić", milliyet: "Hırvatistan", mevki: "Orta saha", dogum: 1988, kariyer: [
+    { kulup: "Basel", bas: 2005, bit: 2007 },
+    { kulup: "Schalke 04", bas: 2007, bit: 2011 },
+    { kulup: "Sevilla", bas: 2011, bit: 2014 },
+    { kulup: "Barcelona", bas: 2014, bit: 2020 },
+    { kulup: "Sevilla", bas: 2020, bit: 2024 },
+    { kulup: "Al Shabab", bas: 2024, bit: 2024 },
+    { kulup: "Hajduk Split", bas: 2024, bit: 2025 } ] },
+  { isim: "Andrés Iniesta", milliyet: "İspanya", mevki: "Orta saha", dogum: 1984, kariyer: [
+    { kulup: "Barcelona", bas: 2002, bit: 2018 },
+    { kulup: "Vissel Kobe", bas: 2018, bit: 2023 },
+    { kulup: "Emirates Club", bas: 2023, bit: 2024 } ] },
+  { isim: "Petr Čech", milliyet: "Çekya", mevki: "Kaleci", dogum: 1982, kariyer: [
+    { kulup: "Chmel Blšany", bas: 1999, bit: 2001 },
+    { kulup: "Sparta Prag", bas: 2001, bit: 2002 },
+    { kulup: "Rennes", bas: 2002, bit: 2004 },
+    { kulup: "Chelsea", bas: 2004, bit: 2015 },
+    { kulup: "Arsenal", bas: 2015, bit: 2019 } ] },
+  { isim: "Marcelo", milliyet: "Brezilya", mevki: "Defans", dogum: 1988, kariyer: [
+    { kulup: "Fluminense", bas: 2005, bit: 2006 },
+    { kulup: "Real Madrid", bas: 2007, bit: 2022 },
+    { kulup: "Olympiakos", bas: 2022, bit: 2023 },
+    { kulup: "Fluminense", bas: 2023, bit: 2024 } ] },
+  { isim: "Raul Meireles", milliyet: "Portekiz", mevki: "Orta saha", dogum: 1983, kariyer: [
+    { kulup: "Boavista", bas: 2001, bit: 2004 },
+    { kulup: "Porto", bas: 2004, bit: 2010 },
+    { kulup: "Liverpool", bas: 2010, bit: 2011 },
+    { kulup: "Chelsea", bas: 2011, bit: 2012 },
+    { kulup: "Fenerbahçe", bas: 2012, bit: 2016 } ] },
+  { isim: "Simão Sabrosa", milliyet: "Portekiz", mevki: "Kanat", dogum: 1979, kariyer: [
+    { kulup: "Sporting CP", bas: 1997, bit: 1999 },
+    { kulup: "Barcelona", bas: 1999, bit: 2001 },
+    { kulup: "Benfica", bas: 2001, bit: 2007 },
+    { kulup: "Atlético Madrid", bas: 2007, bit: 2010 },
+    { kulup: "Beşiktaş", bas: 2010, bit: 2012 },
+    { kulup: "Espanyol", bas: 2012, bit: 2013 },
+    { kulup: "NorthEast United", bas: 2014, bit: 2015 } ] },
+  { isim: "Dirk Kuyt", milliyet: "Hollanda", mevki: "Forvet", dogum: 1980, kariyer: [
+    { kulup: "Utrecht", bas: 1998, bit: 2003 },
+    { kulup: "Feyenoord", bas: 2003, bit: 2006 },
+    { kulup: "Liverpool", bas: 2006, bit: 2012 },
+    { kulup: "Fenerbahçe", bas: 2012, bit: 2015 },
+    { kulup: "Feyenoord", bas: 2015, bit: 2017 } ] },
+  { isim: "Alessandro Del Piero", milliyet: "İtalya", mevki: "Forvet", dogum: 1974, kariyer: [
+    { kulup: "Padova", bas: 1991, bit: 1993 },
+    { kulup: "Juventus", bas: 1993, bit: 2012 },
+    { kulup: "Sydney FC", bas: 2012, bit: 2014 },
+    { kulup: "Delhi Dynamos", bas: 2014, bit: 2014 } ] },
+  { isim: "Gabriel Batistuta", milliyet: "Arjantin", mevki: "Forvet", dogum: 1969, kariyer: [
+    { kulup: "Newell's Old Boys", bas: 1988, bit: 1989 },
+    { kulup: "River Plate", bas: 1989, bit: 1990 },
+    { kulup: "Boca Juniors", bas: 1990, bit: 1991 },
+    { kulup: "Fiorentina", bas: 1991, bit: 2000 },
+    { kulup: "Roma", bas: 2000, bit: 2003 },
+    { kulup: "Al-Arabi", bas: 2003, bit: 2005 } ] },
+  { isim: "Fabio Cannavaro", milliyet: "İtalya", mevki: "Defans", dogum: 1973, kariyer: [
+    { kulup: "Napoli", bas: 1992, bit: 1995 },
+    { kulup: "Parma", bas: 1995, bit: 2002 },
+    { kulup: "Inter", bas: 2002, bit: 2004 },
+    { kulup: "Juventus", bas: 2004, bit: 2006 },
+    { kulup: "Real Madrid", bas: 2006, bit: 2009 },
+    { kulup: "Juventus", bas: 2009, bit: 2010 },
+    { kulup: "Al-Ahli (Dubai)", bas: 2010, bit: 2011 } ] },
+  { isim: "Alessandro Nesta", milliyet: "İtalya", mevki: "Defans", dogum: 1976, kariyer: [
+    { kulup: "Lazio", bas: 1993, bit: 2002 },
+    { kulup: "Milan", bas: 2002, bit: 2012 },
+    { kulup: "Montreal Impact", bas: 2012, bit: 2013 },
+    { kulup: "Chennaiyin", bas: 2014, bit: 2014 } ] },
+  { isim: "Gennaro Gattuso", milliyet: "İtalya", mevki: "Orta saha", dogum: 1978, kariyer: [
+    { kulup: "Perugia", bas: 1995, bit: 1997 },
+    { kulup: "Rangers", bas: 1997, bit: 1998 },
+    { kulup: "Salernitana", bas: 1998, bit: 1999 },
+    { kulup: "Milan", bas: 1999, bit: 2012 },
+    { kulup: "Sion", bas: 2012, bit: 2013 } ] },
+  { isim: "Roberto Baggio", milliyet: "İtalya", mevki: "Forvet", dogum: 1967, kariyer: [
+    { kulup: "Vicenza", bas: 1982, bit: 1985 },
+    { kulup: "Fiorentina", bas: 1985, bit: 1990 },
+    { kulup: "Juventus", bas: 1990, bit: 1995 },
+    { kulup: "Milan", bas: 1995, bit: 1997 },
+    { kulup: "Bologna", bas: 1997, bit: 1998 },
+    { kulup: "Inter", bas: 1998, bit: 2000 },
+    { kulup: "Brescia", bas: 2000, bit: 2004 } ] },
+  { isim: "Ashley Cole", milliyet: "İngiltere", mevki: "Defans", dogum: 1980, kariyer: [
+    { kulup: "Arsenal", bas: 1999, bit: 2006 },
+    { kulup: "Chelsea", bas: 2006, bit: 2014 },
+    { kulup: "Roma", bas: 2014, bit: 2016 },
+    { kulup: "LA Galaxy", bas: 2016, bit: 2018 },
+    { kulup: "Derby County", bas: 2019, bit: 2019 } ] },
+  { isim: "Sol Campbell", milliyet: "İngiltere", mevki: "Defans", dogum: 1974, kariyer: [
+    { kulup: "Tottenham Hotspur", bas: 1992, bit: 2001 },
+    { kulup: "Arsenal", bas: 2001, bit: 2006 },
+    { kulup: "Portsmouth", bas: 2006, bit: 2009 },
+    { kulup: "Notts County", bas: 2009, bit: 2009 },
+    { kulup: "Arsenal", bas: 2010, bit: 2010 },
+    { kulup: "Newcastle United", bas: 2010, bit: 2011 } ] },
+  { isim: "Raúl González", milliyet: "İspanya", mevki: "Forvet", dogum: 1977, kariyer: [
+    { kulup: "Real Madrid", bas: 1994, bit: 2010 },
+    { kulup: "Schalke 04", bas: 2010, bit: 2012 },
+    { kulup: "Al Sadd", bas: 2012, bit: 2014 },
+    { kulup: "New York Cosmos", bas: 2014, bit: 2015 } ] },
+  { isim: "Santi Cazorla", milliyet: "İspanya", mevki: "Orta saha", dogum: 1984, kariyer: [
+    { kulup: "Villarreal", bas: 2003, bit: 2006 },
+    { kulup: "Recreativo Huelva", bas: 2006, bit: 2007 },
+    { kulup: "Villarreal", bas: 2007, bit: 2011 },
+    { kulup: "Málaga", bas: 2011, bit: 2012 },
+    { kulup: "Arsenal", bas: 2012, bit: 2018 },
+    { kulup: "Villarreal", bas: 2018, bit: 2020 },
+    { kulup: "Al Sadd", bas: 2020, bit: 2023 },
+    { kulup: "Real Oviedo", bas: 2023, bit: null } ] },
+  { isim: "David Silva", milliyet: "İspanya", mevki: "Orta saha", dogum: 1986, kariyer: [
+    { kulup: "Valencia", bas: 2004, bit: 2010 },
+    { kulup: "Manchester City", bas: 2010, bit: 2020 },
+    { kulup: "Real Sociedad", bas: 2020, bit: 2023 } ] },
+  { isim: "Sami Khedira", milliyet: "Almanya", mevki: "Orta saha", dogum: 1987, kariyer: [
+    { kulup: "Stuttgart", bas: 2006, bit: 2010 },
+    { kulup: "Real Madrid", bas: 2010, bit: 2015 },
+    { kulup: "Juventus", bas: 2015, bit: 2021 },
+    { kulup: "Hertha Berlin", bas: 2021, bit: 2021 } ] },
+  { isim: "Patrick Vieira", milliyet: "Fransa", mevki: "Orta saha", dogum: 1976, kariyer: [
+    { kulup: "Cannes", bas: 1993, bit: 1995 },
+    { kulup: "Milan", bas: 1995, bit: 1996 },
+    { kulup: "Arsenal", bas: 1996, bit: 2005 },
+    { kulup: "Juventus", bas: 2005, bit: 2006 },
+    { kulup: "Inter", bas: 2006, bit: 2010 },
+    { kulup: "Manchester City", bas: 2010, bit: 2011 } ] },
+  { isim: "Lilian Thuram", milliyet: "Fransa", mevki: "Defans", dogum: 1972, kariyer: [
+    { kulup: "Monaco", bas: 1991, bit: 1996 },
+    { kulup: "Parma", bas: 1996, bit: 2001 },
+    { kulup: "Juventus", bas: 2001, bit: 2006 },
+    { kulup: "Barcelona", bas: 2006, bit: 2008 } ] },
+  { isim: "Claude Makélélé", milliyet: "Fransa", mevki: "Orta saha", dogum: 1973, kariyer: [
+    { kulup: "Nantes", bas: 1992, bit: 1997 },
+    { kulup: "Marseille", bas: 1997, bit: 1998 },
+    { kulup: "Celta Vigo", bas: 1998, bit: 2000 },
+    { kulup: "Real Madrid", bas: 2000, bit: 2003 },
+    { kulup: "Chelsea", bas: 2003, bit: 2008 },
+    { kulup: "Paris Saint-Germain", bas: 2008, bit: 2011 } ] },
+  { isim: "Robert Pirès", milliyet: "Fransa", mevki: "Kanat", dogum: 1973, kariyer: [
+    { kulup: "Metz", bas: 1993, bit: 1998 },
+    { kulup: "Marseille", bas: 1998, bit: 2000 },
+    { kulup: "Arsenal", bas: 2000, bit: 2006 },
+    { kulup: "Villarreal", bas: 2006, bit: 2010 },
+    { kulup: "Aston Villa", bas: 2010, bit: 2011 },
+    { kulup: "FC Goa", bas: 2014, bit: 2015 } ] },
+  { isim: "Virgil van Dijk", milliyet: "Hollanda", mevki: "Defans", dogum: 1991, kariyer: [
+    { kulup: "Groningen", bas: 2011, bit: 2013 },
+    { kulup: "Celtic", bas: 2013, bit: 2015 },
+    { kulup: "Southampton", bas: 2015, bit: 2018 },
+    { kulup: "Liverpool", bas: 2018, bit: null } ] },
+  { isim: "Thibaut Courtois", milliyet: "Belçika", mevki: "Kaleci", dogum: 1992, kariyer: [
+    { kulup: "Genk", bas: 2009, bit: 2011 },
+    { kulup: "Chelsea", bas: 2011, bit: 2018 },
+    { kulup: "Real Madrid", bas: 2018, bit: null } ] },
+  { isim: "Jan Vertonghen", milliyet: "Belçika", mevki: "Defans", dogum: 1987, kariyer: [
+    { kulup: "Ajax", bas: 2006, bit: 2012 },
+    { kulup: "Tottenham Hotspur", bas: 2012, bit: 2020 },
+    { kulup: "Benfica", bas: 2020, bit: 2022 },
+    { kulup: "Anderlecht", bas: 2022, bit: 2025 } ] },
+  { isim: "Christian Eriksen", milliyet: "Danimarka", mevki: "Orta saha", dogum: 1992, kariyer: [
+    { kulup: "Ajax", bas: 2010, bit: 2013 },
+    { kulup: "Tottenham Hotspur", bas: 2013, bit: 2020 },
+    { kulup: "Inter", bas: 2020, bit: 2021 },
+    { kulup: "Brentford", bas: 2022, bit: 2022 },
+    { kulup: "Manchester United", bas: 2022, bit: 2025 },
+    { kulup: "Wolfsburg", bas: 2025, bit: null } ] },
+  { isim: "Riyad Mahrez", milliyet: "Cezayir", mevki: "Kanat", dogum: 1991, kariyer: [
+    { kulup: "Quimper", bas: 2009, bit: 2010 },
+    { kulup: "Le Havre", bas: 2010, bit: 2014 },
+    { kulup: "Leicester City", bas: 2014, bit: 2018 },
+    { kulup: "Manchester City", bas: 2018, bit: 2023 },
+    { kulup: "Al Ahli", bas: 2023, bit: null } ] },
+  { isim: "Son Heung-min", milliyet: "Güney Kore", mevki: "Forvet", dogum: 1992, kariyer: [
+    { kulup: "Hamburg", bas: 2010, bit: 2013 },
+    { kulup: "Bayer Leverkusen", bas: 2013, bit: 2015 },
+    { kulup: "Tottenham Hotspur", bas: 2015, bit: 2025 },
+    { kulup: "Los Angeles FC", bas: 2025, bit: null } ] },
+  { isim: "Jamie Vardy", milliyet: "İngiltere", mevki: "Forvet", dogum: 1987, kariyer: [
+    { kulup: "Stocksbridge Park Steels", bas: 2007, bit: 2010 },
+    { kulup: "FC Halifax Town", bas: 2010, bit: 2011 },
+    { kulup: "Fleetwood Town", bas: 2011, bit: 2012 },
+    { kulup: "Leicester City", bas: 2012, bit: 2025 },
+    { kulup: "Cremonese", bas: 2025, bit: null } ] },
+  { isim: "Bernardo Silva", milliyet: "Portekiz", mevki: "Orta saha", dogum: 1994, kariyer: [
+    { kulup: "Benfica", bas: 2013, bit: 2014 },
+    { kulup: "Monaco", bas: 2014, bit: 2017 },
+    { kulup: "Manchester City", bas: 2017, bit: null } ] },
+  { isim: "Jude Bellingham", milliyet: "İngiltere", mevki: "Orta saha", dogum: 2003, kariyer: [
+    { kulup: "Birmingham City", bas: 2019, bit: 2020 },
+    { kulup: "Borussia Dortmund", bas: 2020, bit: 2023 },
+    { kulup: "Real Madrid", bas: 2023, bit: null } ] },
+  { isim: "Achraf Hakimi", milliyet: "Fas", mevki: "Defans", dogum: 1998, kariyer: [
+    { kulup: "Real Madrid", bas: 2016, bit: 2020 },
+    { kulup: "Inter", bas: 2020, bit: 2021 },
+    { kulup: "Paris Saint-Germain", bas: 2021, bit: null } ] },
+  { isim: "Julián Álvarez", milliyet: "Arjantin", mevki: "Forvet", dogum: 2000, kariyer: [
+    { kulup: "River Plate", bas: 2018, bit: 2022 },
+    { kulup: "Manchester City", bas: 2022, bit: 2024 },
+    { kulup: "Atlético Madrid", bas: 2024, bit: null } ] },
+  { isim: "Kingsley Coman", milliyet: "Fransa", mevki: "Kanat", dogum: 1996, kariyer: [
+    { kulup: "Paris Saint-Germain", bas: 2013, bit: 2014 },
+    { kulup: "Juventus", bas: 2014, bit: 2015 },
+    { kulup: "Bayern Münih", bas: 2015, bit: 2025 },
+    { kulup: "Al Nassr", bas: 2025, bit: null } ] },
+  { isim: "Bruno Fernandes", milliyet: "Portekiz", mevki: "Orta saha", dogum: 1994, kariyer: [
+    { kulup: "Novara", bas: 2012, bit: 2013 },
+    { kulup: "Udinese", bas: 2013, bit: 2016 },
+    { kulup: "Sampdoria", bas: 2016, bit: 2017 },
+    { kulup: "Sporting CP", bas: 2017, bit: 2020 },
+    { kulup: "Manchester United", bas: 2020, bit: null } ] },
+];
+
+/* =====================================================================
+   SERBEST MOD FİLTRELERİ İÇİN VERİ
+   ---------------------------------------------------------------------
+   LIGLER: Hangi kulüp hangi lige sayılır. Bir oyuncu, kariyerindeki
+   kulüplerden biri bu listede ise o ligin havuzuna girer.
+   Bilerek dışarıda bırakılan kulüpler: oyuncumuz oradayken kulüp alt
+   ligdeydi (ör. Sporting Gijón–Villa, Como–Fàbregas, Le Havre–Mahrez,
+   Derby County–Rooney, Padova–Del Piero). Yeni oyuncu eklerken
+   kulübü gerekirse buraya ekle.
+   ===================================================================== */
+const LIGLER = {
+  "Premier Lig": ["Manchester United", "Manchester City", "Arsenal", "Chelsea", "Liverpool", "Tottenham Hotspur",
+    "Newcastle United", "Everton", "Blackburn Rovers", "West Ham United", "Bolton Wanderers", "West Bromwich Albion",
+    "Southampton", "Leicester City", "Aston Villa", "Portsmouth", "Stoke City", "Brentford"],
+  "La Liga": ["Real Madrid", "Barcelona", "Atlético Madrid", "Valencia", "Sevilla", "Villarreal", "Real Sociedad",
+    "Real Zaragoza", "Málaga", "Celta Vigo", "Espanyol", "Recreativo Huelva", "Real Oviedo"],
+  "Serie A": ["Juventus", "Inter", "Milan", "Roma", "Napoli", "Lazio", "Fiorentina", "Parma", "Sampdoria", "Udinese",
+    "Torino", "Brescia", "Bologna", "Salernitana", "Cremonese"],
+  "Bundesliga": ["Bayern Münih", "Borussia Dortmund", "Schalke 04", "Werder Bremen", "Bayer Leverkusen", "Wolfsburg",
+    "Stuttgart", "Hamburg", "1. FC Köln", "Kaiserslautern", "Nürnberg", "Hertha Berlin", "Darmstadt 98", "Bochum"],
+  "Ligue 1": ["Paris Saint-Germain", "Monaco", "Marseille", "Lyon", "Lille", "Bordeaux", "Nice", "Metz", "Rennes",
+    "Nantes", "Cannes", "Montpellier", "Caen", "Guingamp"],
+  "Süper Lig": ["Galatasaray", "Fenerbahçe", "Beşiktaş", "İstanbul Başakşehir", "Bursaspor", "Sakaryaspor",
+    "Kasımpaşa", "Antalyaspor"],
+};
+
+// Şampiyonlar Ligi'ni (1992'den bu yana) en az bir kez kazanmış oyuncular (kazanan kadroda yer almak yeterli).
+const SL_SAMPIYONLARI = [
+  "Cristiano Ronaldo", "Lionel Messi", "Thierry Henry", "David Beckham", "Ronaldinho", "Andrea Pirlo",
+  "Fernando Torres", "Wesley Sneijder", "Didier Drogba", "Roberto Carlos", "Zinedine Zidane", "Luís Figo", "Kaká",
+  "Andriy Shevchenko", "Neymar", "Luis Suárez", "Karim Benzema", "Kevin De Bruyne", "Luka Modrić", "Eden Hazard",
+  "Mohamed Salah", "Erling Haaland", "Ángel Di María", "Xabi Alonso", "David Villa", "Arjen Robben",
+  "Clarence Seedorf", "Patrick Kluivert", "Nicolas Anelka", "Franck Ribéry", "Wayne Rooney", "Frank Lampard",
+  "Gareth Bale", "Pepe", "Mario Gómez", "Bastian Schweinsteiger", "İlkay Gündoğan", "N'Golo Kanté",
+  "Olivier Giroud", "Ivan Rakitić", "Andrés Iniesta", "Petr Čech", "Marcelo", "Raul Meireles",
+  "Alessandro Del Piero", "Alessandro Nesta", "Gennaro Gattuso", "Ashley Cole", "Raúl González", "Sami Khedira",
+  "Claude Makélélé", "Virgil van Dijk", "Thibaut Courtois", "Riyad Mahrez", "Bernardo Silva", "Jude Bellingham",
+  "Achraf Hakimi", "Julián Álvarez", "Kingsley Coman",
+];
+
+// Serbest mod havuzları. "Güncel" = hâlâ aktif (son kulübü bit: null), "Efsaneler" = futbolu bırakmış.
+const FILTRELER = [
+  { id: "hepsi",   ad: "Rastgele",          test: () => true },
+  { id: "pl",      ad: "Premier Lig",       test: p => p._ligler.has("Premier Lig") },
+  { id: "laliga",  ad: "La Liga",           test: p => p._ligler.has("La Liga") },
+  { id: "seriea",  ad: "Serie A",           test: p => p._ligler.has("Serie A") },
+  { id: "bundes",  ad: "Bundesliga",        test: p => p._ligler.has("Bundesliga") },
+  { id: "ligue1",  ad: "Ligue 1",           test: p => p._ligler.has("Ligue 1") },
+  { id: "superlig",ad: "Süper Lig",         test: p => p._ligler.has("Süper Lig") },
+  { id: "ucl",     ad: "Şampiyonlar Ligi",  test: p => p._ucl },
+  { id: "efsane",  ad: "Efsaneler",         test: p => !p._aktif },
+  { id: "guncel",  ad: "Güncel",            test: p => p._aktif },
+];
+
+/* =====================================================================
+   GÖRSEL VERİ: kulüp renkleri ve ülke bayrakları
+   ---------------------------------------------------------------------
+   KULUP_RENK: "Kulüp adı": [ana renk, ikinci renk]. Listede olmayan kulüp
+   nötr gri rozetle gösterilir; yeni kulüp eklerken buraya da ekleyebilirsin.
+   ULKE_KODU: milliyet -> ISO ülke kodu (bayrak emojisi bundan üretilir).
+   ===================================================================== */
+const KULUP_RENK = {
+  "1. FC Köln": ["#ED1C24", "#FFFFFF"], "Ajax": ["#D2122E", "#FFFFFF"], "Al Ahli": ["#00843D", "#FFFFFF"],
+  "Al Ahli (Dubai)": ["#C8102E", "#FFFFFF"], "Al-Ahli (Dubai)": ["#C8102E", "#FFFFFF"], "Al Hilal": ["#0055A5", "#FFFFFF"],
+  "Al Ittihad": ["#FFD100", "#111111"], "Al Nassr": ["#FFD200", "#1A2A6C"], "Al Sadd": ["#FFFFFF", "#111111"],
+  "Al-Arabi": ["#E21E26", "#FFFFFF"], "Al-Gharafa": ["#FFD700", "#1E3A8A"], "Anderlecht": ["#5B2C83", "#FFFFFF"],
+  "Antalyaspor": ["#E30A17", "#FFFFFF"], "Anzhi Makhachkala": ["#FFD700", "#0B7A3E"], "Argentinos Juniors": ["#E2001A", "#FFFFFF"],
+  "Arsenal": ["#EF0107", "#FFFFFF"], "Aston Villa": ["#670E36", "#95BFE5"], "Atlético Madrid": ["#CB3524", "#FFFFFF"],
+  "Atlético Mineiro": ["#111111", "#FFFFFF"], "Barcelona": ["#A50044", "#004D98"], "Basel": ["#E30613", "#003E80"],
+  "Bayer Leverkusen": ["#E32221", "#111111"], "Bayern Münih": ["#DC052D", "#FFFFFF"], "Benfica": ["#E20E0E", "#FFFFFF"],
+  "Beşiktaş": ["#111111", "#FFFFFF"], "Birmingham City": ["#0000CC", "#FFFFFF"], "Blackburn Rovers": ["#009EE0", "#FFFFFF"],
+  "Boavista": ["#111111", "#FFFFFF"], "Boca Juniors": ["#103F79", "#F3B229"], "Bochum": ["#005CA9", "#FFFFFF"],
+  "Bologna": ["#A21C26", "#1A2F48"], "Bolton Wanderers": ["#FFFFFF", "#263C7E"], "Bordeaux": ["#1B2A4A", "#FFFFFF"],
+  "Borussia Dortmund": ["#FDE100", "#111111"], "Botafogo": ["#111111", "#FFFFFF"], "Brentford": ["#E30613", "#FFFFFF"],
+  "Brescia": ["#0050A0", "#FFFFFF"], "Bursaspor": ["#007A33", "#FFFFFF"], "Caen": ["#D6001C", "#003A80"],
+  "Celta Vigo": ["#8AC3EE", "#FFFFFF"], "Celtic": ["#018749", "#FFFFFF"], "Charleroi": ["#111111", "#FFFFFF"],
+  "Chelsea": ["#034694", "#FFFFFF"], "Chicago Fire": ["#9D2235", "#FFFFFF"], "Como": ["#1E3A8A", "#FFFFFF"],
+  "Corinthians": ["#FFFFFF", "#111111"], "Cremonese": ["#C8102E", "#9EA2A2"], "Cruzeiro": ["#003399", "#FFFFFF"],
+  "DC United": ["#111111", "#D61018"], "Darmstadt 98": ["#004E9E", "#FFFFFF"], "Derby County": ["#FFFFFF", "#111111"],
+  "Dinamo Kiev": ["#FFFFFF", "#0052A5"], "Dinamo Zagreb": ["#0A3A9A", "#FFFFFF"], "Espanyol": ["#007FC8", "#FFFFFF"],
+  "Everton": ["#003399", "#FFFFFF"], "Fenerbahçe": ["#FFED00", "#002D72"], "Feyenoord": ["#E30613", "#FFFFFF"],
+  "Fiorentina": ["#482E92", "#FFFFFF"], "Flamengo": ["#C4161C", "#111111"], "Fluminense": ["#7A1E33", "#00613C"],
+  "Galatasaray": ["#FDB912", "#A90432"], "Genk": ["#1E3C8C", "#FFFFFF"], "Grêmio": ["#0D80BF", "#111111"],
+  "Groningen": ["#00A650", "#FFFFFF"], "Guingamp": ["#D6001C", "#111111"], "Hajduk Split": ["#FFFFFF", "#003DA5"],
+  "Hamburg": ["#0A3F86", "#FFFFFF"], "Heerenveen": ["#0057B8", "#FFFFFF"], "Hertha Berlin": ["#005CA9", "#FFFFFF"],
+  "Independiente": ["#E2001A", "#FFFFFF"], "Inter Miami": ["#F7B5CD", "#111111"], "Inter": ["#0068A8", "#111111"],
+  "Juventus": ["#111111", "#FFFFFF"], "Kaiserslautern": ["#E2001A", "#FFFFFF"], "Kasımpaşa": ["#1C2D6A", "#FFFFFF"],
+  "LA Galaxy": ["#00245D", "#FFD200"], "Lazio": ["#87D8F7", "#FFFFFF"], "Leicester City": ["#003090", "#FFFFFF"],
+  "Lille": ["#E01E13", "#002B5C"], "Liverpool": ["#C8102E", "#FFFFFF"], "Los Angeles FC": ["#111111", "#C39E6D"],
+  "Lyon": ["#FFFFFF", "#1D4D9F"], "Malmö FF": ["#87CEEB", "#FFFFFF"], "Manchester City": ["#6CABDD", "#FFFFFF"],
+  "Manchester United": ["#DA291C", "#111111"], "Marseille": ["#2FAEE0", "#FFFFFF"], "Marítimo": ["#007A3D", "#D6001C"],
+  "Metz": ["#7B1C2E", "#FFFFFF"], "Milan": ["#FB090B", "#111111"], "Molde": ["#0047AB", "#FFFFFF"],
+  "Monaco": ["#E7182A", "#FFFFFF"], "Montpellier": ["#F37021", "#1C2D6A"], "Montreal Impact": ["#0033A1", "#111111"],
+  "Málaga": ["#5FB3E4", "#FFFFFF"], "Nacional": ["#FFFFFF", "#1E3A8A"], "Nantes": ["#FCD405", "#007A3D"],
+  "Napoli": ["#12A0D7", "#FFFFFF"], "New York City FC": ["#6CACE4", "#041E42"], "New York Cosmos": ["#00843D", "#FFFFFF"],
+  "New York Red Bulls": ["#ED1E36", "#FFFFFF"], "Newcastle United": ["#111111", "#FFFFFF"], "Newell's Old Boys": ["#D6001C", "#111111"],
+  "Nice": ["#D6001C", "#111111"], "Notts County": ["#111111", "#FFFFFF"], "Nürnberg": ["#AD1732", "#111111"],
+  "Olympiakos": ["#D6001C", "#FFFFFF"], "Orlando City": ["#633492", "#FFFFFF"], "PSV": ["#ED1C24", "#FFFFFF"],
+  "Palmeiras": ["#006437", "#FFFFFF"], "Paris Saint-Germain": ["#004170", "#DA291C"], "Parma": ["#FFD200", "#1B4F9C"],
+  "Perugia": ["#D6001C", "#FFFFFF"], "Porto": ["#003893", "#FFFFFF"], "Portsmouth": ["#001489", "#FFFFFF"],
+  "Rangers": ["#1B458F", "#FFFFFF"], "Real Madrid": ["#FFFFFF", "#FEBE10"], "Real Oviedo": ["#0047AB", "#FFFFFF"],
+  "Real Sociedad": ["#0067B1", "#FFFFFF"], "Real Zaragoza": ["#FFFFFF", "#0047AB"], "Recreativo Huelva": ["#0047AB", "#FFFFFF"],
+  "Red Bull Salzburg": ["#D6001C", "#FFFFFF"], "Rennes": ["#D6001C", "#111111"], "River Plate": ["#FFFFFF", "#E2001A"],
+  "Roma": ["#8E1F2F", "#F0BC42"], "Rosario Central": ["#00539F", "#FFD700"], "Sakaryaspor": ["#007A33", "#111111"],
+  "Salernitana": ["#7A1E2B", "#FFFFFF"], "Sampdoria": ["#1B5497", "#FFFFFF"], "Santos": ["#FFFFFF", "#111111"],
+  "Schalke 04": ["#004D9D", "#FFFFFF"], "Sevilla": ["#FFFFFF", "#D41F2D"], "Shanghai Shenhua": ["#1E4FA0", "#FFFFFF"],
+  "Sion": ["#D6001C", "#FFFFFF"], "Southampton": ["#D71920", "#FFFFFF"], "Sparta Prag": ["#8B1E3F", "#FFFFFF"],
+  "Sporting CP": ["#008057", "#FFFFFF"], "Sporting Gijón": ["#D6001C", "#FFFFFF"], "Steaua Bükreş": ["#D6001C", "#003DA5"],
+  "Stoke City": ["#E03A3E", "#FFFFFF"], "Stuttgart": ["#FFFFFF", "#E32219"], "Sydney FC": ["#6CACE4", "#FFFFFF"],
+  "São Paulo": ["#FE0000", "#111111"], "Torino": ["#8A1E03", "#FFFFFF"], "Tottenham Hotspur": ["#FFFFFF", "#132257"],
+  "Udinese": ["#111111", "#FFFFFF"], "Utrecht": ["#D6001C", "#FFFFFF"], "Valencia": ["#FFFFFF", "#111111"],
+  "Villarreal": ["#FFE667", "#1C2D6A"], "Vissel Kobe": ["#A0002A", "#111111"], "Vitória Guimarães": ["#FFFFFF", "#111111"],
+  "Werder Bremen": ["#1D9053", "#FFFFFF"], "West Bromwich Albion": ["#122F67", "#FFFFFF"], "West Ham United": ["#7A263A", "#1BB1E7"],
+  "Wolfsburg": ["#65B32E", "#FFFFFF"], "İstanbul Başakşehir": ["#F37021", "#1E2C5C"], "Željezničar": ["#0047AB", "#FFFFFF"],
+  "Cannes": ["#D6001C", "#FFFFFF"], "Le Havre": ["#73B6E6", "#1C2D6A"], "Brest": ["#D6001C", "#FFFFFF"],
+  "Novara": ["#0047AB", "#FFFFFF"], "Vicenza": ["#D6001C", "#FFFFFF"], "Padova": ["#FFFFFF", "#D6001C"],
+  "Fleetwood Town": ["#D6001C", "#FFFFFF"], "FC Halifax Town": ["#0047AB", "#FFFFFF"], "Mumbai City": ["#6CACE4", "#FFFFFF"],
+  "FC Goa": ["#F37021", "#1E3A8A"], "Sagan Tosu": ["#00A0E9", "#F19CBB"], "Boulogne": ["#D6001C", "#111111"],
+  "Cobreloa": ["#F37021", "#FFFFFF"], "Chemnitzer FC": ["#6CACE4", "#FFFFFF"], "Phoenix Rising": ["#D6001C", "#111111"],
+};
+
+const ULKE_KODU = {
+  "Almanya": "DE", "Arjantin": "AR", "Belçika": "BE", "Bosna-Hersek": "BA", "Brezilya": "BR", "Cezayir": "DZ",
+  "Danimarka": "DK", "Fas": "MA", "Fildişi Sahili": "CI", "Fransa": "FR", "Galler": "GB-WLS", "Güney Kore": "KR",
+  "Hollanda": "NL", "Hırvatistan": "HR", "Mısır": "EG", "Nijerya": "NG", "Norveç": "NO", "Portekiz": "PT",
+  "Romanya": "RO", "Türkiye": "TR", "Ukrayna": "UA", "Uruguay": "UY", "Çekya": "CZ", "İngiltere": "GB-ENG",
+  "İskoçya": "GB-SCT", "İspanya": "ES", "İsveç": "SE", "İtalya": "IT", "Şili": "CL", "Polonya": "PL",
+  "Kolombiya": "CO", "Sırbistan": "RS", "Senegal": "SN", "Kamerun": "CM", "Gana": "GH", "ABD": "US", "Japonya": "JP",
+};
+// ISO kodundan bayrak emojisi üretir (İngiltere/Galler/İskoçya için özel etiket dizisi)
+function bayrak(milliyet) {
+  const kod = ULKE_KODU[milliyet];
+  if (!kod) return "🌍";
+  if (kod.startsWith("GB-")) {
+    const tag = ("gb" + kod.slice(3).toLowerCase());
+    return String.fromCodePoint(0x1F3F4, ...[...tag].map(ch => 0xE0000 + ch.charCodeAt(0)), 0xE007F);
+  }
+  return String.fromCodePoint(...[...kod].map(ch => 0x1F1E6 + ch.charCodeAt(0) - 65));
+}
+function kulupRozet(kulup) {
+  const r = KULUP_RENK[kulup] || ["#4b5b51", "#2a362f"];
+  return `<div class="num crest" style="--c1:${r[0]};--c2:${r[1]}" aria-hidden="true"></div>`;
+}
+
+(function hazirla() {
+  const kulupLig = {};
+  for (const [lig, kulupler] of Object.entries(LIGLER)) kulupler.forEach(k => kulupLig[k] = lig);
+  const ucl = new Set(SL_SAMPIYONLARI);
+  SL_SAMPIYONLARI.forEach(n => { if (!OYUNCULAR.some(p => p.isim === n)) console.warn("Şampiyonlar Ligi listesinde bilinmeyen isim:", n); });
+  OYUNCULAR.forEach(p => {
+    p._ligler = new Set(p.kariyer.map(c => kulupLig[c.kulup]).filter(Boolean));
+    p._ucl = ucl.has(p.isim);
+    p._aktif = p.kariyer[p.kariyer.length - 1].bit === null;
+  });
+})();
+
+/* =====================================================================
+   OYUN MOTORU
+   ===================================================================== */
+const MAX_GUESS = 6;
+const GAME_NAME = "Futbol Wordle";
+const EPOCH_UTC = Date.UTC(2025, 0, 1); // #1 = 1 Ocak 2025
+const LS_STATS = "fw-stats-v1";
+const lsDayKey = d => "fw-daily-v1-" + d;
+
+const $ = id => document.getElementById(id);
+
+// Türkçe karakter + aksan toleranslı normalizasyon
+function norm(s) {
+  return s.toLocaleLowerCase("tr")
+    .replace(/ı/g, "i")
+    .normalize("NFD").replace(/[̀-ͯ]/g, "")
+    .replace(/ø/g, "o").replace(/æ/g, "ae").replace(/ß/g, "ss").replace(/đ/g, "d").replace(/ł/g, "l")
+    .replace(/[’'`.\-]/g, " ").replace(/\s+/g, " ").trim();
+}
+OYUNCULAR.forEach(p => { p._n = norm(p.isim); });
+
+// Bugünün gün numarası (yerel tarihe göre)
+function todayNumber() {
+  const d = new Date();
+  return Math.floor((Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) - EPOCH_UTC) / 86400000) + 1;
+}
+// Tohumlu rastgele sayı üreteci
+function mulberry32(a) {
+  return function () {
+    a |= 0; a = a + 0x6D2B79F5 | 0;
+    let t = Math.imul(a ^ a >>> 15, 1 | a);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+function hashStr(s) {
+  let h = 2166136261;
+  for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
+  return h >>> 0;
+}
+// Günün oyuncusu: gün numarasından türetilen tohumla karıştırılmış sırada seçilir.
+// Aynı tur (N gün) içinde aynı oyuncu iki kez gelmez.
+function dailyPlayerIndex(day) {
+  const N = OYUNCULAR.length;
+  const cycle = Math.floor((day - 1) / N);
+  const pos = (day - 1) % N;
+  const rnd = mulberry32(hashStr("futbol-wordle-" + cycle));
+  const perm = [...Array(N).keys()];
+  for (let i = N - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [perm[i], perm[j]] = [perm[j], perm[i]]; }
+  return perm[pos];
+}
+
+function yearsText(c) {
+  if (c.bit === null) return c.bas + "–";
+  if (c.bas === c.bit) return String(c.bas);
+  return c.bas + "–" + c.bit;
+}
+// Günlük mod: kulüpler, ardından milliyet/mevki/doğum yılı ipucu olarak açılır.
+// Serbest mod: yalnızca kulüpler ipucu. Kolay modda kimlik bilgileri baştan profil kartında, zor modda hiç yok.
+function buildClues(p) {
+  const clues = p.kariyer.map((c, i) => ({ type: "club", label: (i + 1) + ". kulüp", years: yearsText(c), text: c.kulup }));
+  if (S.mode === "free") return clues;
+  clues.push({ type: "extra", label: "Milliyet", text: p.milliyet });
+  clues.push({ type: "extra", label: "Mevki", text: p.mevki });
+  clues.push({ type: "extra", label: "Doğum yılı", text: String(p.dogum) });
+  return clues;
+}
+
+/* ---------- Durum ---------- */
+const S = {
+  mode: "daily",
+  day: todayNumber(),
+  target: null,     // oyuncu index
+  guesses: [],      // { name, result: 'right' | 'wrong' | 'pass' }
+  over: false,
+  won: false,
+  shownClues: 0,    // animasyon için
+  shownGuesses: 0,
+};
+
+function loadStats() {
+  try { return Object.assign({ played: 0, wins: 0, cur: 0, max: 0, dist: [0,0,0,0,0,0], lastWinDay: null, lastPlayedDay: null }, JSON.parse(localStorage.getItem(LS_STATS) || "{}")); }
+  catch { return { played: 0, wins: 0, cur: 0, max: 0, dist: [0,0,0,0,0,0], lastWinDay: null, lastPlayedDay: null }; }
+}
+function saveStats(st) { try { localStorage.setItem(LS_STATS, JSON.stringify(st)); } catch {} }
+
+function saveDaily() {
+  if (S.mode !== "daily") return;
+  try { localStorage.setItem(lsDayKey(S.day), JSON.stringify({ target: S.target, guesses: S.guesses, over: S.over, won: S.won })); } catch {}
+}
+function loadDaily() {
+  try {
+    const raw = JSON.parse(localStorage.getItem(lsDayKey(S.day)) || "null");
+    if (raw && raw.target === S.target) return raw;
+  } catch {}
+  return null;
+}
+
+/* ---------- Başlatma ---------- */
+function startDaily() {
+  resetTransient();
+  S.mode = "daily";
+  S.day = todayNumber();
+  S.target = dailyPlayerIndex(S.day);
+  const saved = loadDaily();
+  S.guesses = saved ? saved.guesses : [];
+  S.over = saved ? saved.over : false;
+  S.won = saved ? saved.won : false;
+  S.shownClues = 0; S.shownGuesses = S.guesses.length;
+  render(true);
+  if (S.over) scheduleResult(350);
+}
+// Sonuç penceresi gecikmeli açılır; mod değişirse bekleyen açılış iptal edilir.
+let resultTimer;
+function scheduleResult(ms) { clearTimeout(resultTimer); resultTimer = setTimeout(openResult, ms); }
+function resetTransient() { clearTimeout(resultTimer); clearInterval(cdTimer); closeAll(); }
+/* ---------- Serbest mod havuzu ---------- */
+const LS_FILTER = "fw-filter-v1";
+S.filter = (() => { try { const f = localStorage.getItem(LS_FILTER); if (FILTRELER.some(x => x.id === f)) return f; } catch {} return "hepsi"; })();
+const currentFilter = () => FILTRELER.find(f => f.id === S.filter) || FILTRELER[0];
+const poolOf = f => OYUNCULAR.map((p, i) => i).filter(i => f.test(OYUNCULAR[i]));
+
+// Her havuz için karıştırılmış bir "torba": havuz bitene kadar aynı oyuncu tekrar gelmez.
+const bags = {};
+function nextFromPool() {
+  const f = currentFilter();
+  let bag = bags[f.id];
+  if (!bag || !bag.length) {
+    bag = poolOf(f);
+    for (let i = bag.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [bag[i], bag[j]] = [bag[j], bag[i]]; }
+    // Yeni turun ilk oyuncusu, az önce oynanan olmasın
+    if (bag.length > 1 && bag[bag.length - 1] === S.target) [bag[0], bag[bag.length - 1]] = [bag[bag.length - 1], bag[0]];
+    bags[f.id] = bag;
+  }
+  return bag.pop();
+}
+function renderChips() {
+  $("chips").innerHTML = FILTRELER.map(f =>
+    `<button class="chip${f.id === S.filter ? " active" : ""}" data-f="${f.id}" aria-pressed="${f.id === S.filter}">${f.ad}<span class="cnt">${poolOf(f).length}</span></button>`
+  ).join("");
+}
+$("chips").addEventListener("click", e => {
+  const b = e.target.closest(".chip"); if (!b) return;
+  S.filter = b.dataset.f;
+  try { localStorage.setItem(LS_FILTER, S.filter); } catch {}
+  startFree();
+});
+
+const DIFF_AD = { kolay: "Kolay", zor: "Zor" };
+// Serbest moda her girişte önce zorluk seçilir
+function showDiffPick() {
+  S.mode = "free";
+  S.diff = null;
+  resetTransient();
+  render(true);
+  window.scrollTo(0, 0);
+}
+$("diffPick").addEventListener("click", e => {
+  const b = e.target.closest(".diff-card"); if (!b) return;
+  S.diff = b.dataset.diff;
+  startFree();
+});
+
+function startFree() {
+  S.mode = "free";
+  if (!S.diff) { showDiffPick(); return; }
+  resetTransient();
+  S.target = nextFromPool();
+  S.guesses = []; S.over = false; S.won = false;
+  S.shownClues = 0; S.shownGuesses = 0;
+  render(true);
+  $("guessInput").focus();
+}
+
+/* ---------- Tahmin ---------- */
+function wrongCount() { return S.guesses.filter(g => g.result !== "right").length; }
+
+function submitGuess(name) {
+  if (S.over) return;
+  const p = OYUNCULAR.find(x => x.isim === name);
+  if (!p) { showMsg("Listeden bir futbolcu seç."); return; }
+  if (S.guesses.some(g => g.name === name)) { showMsg("Bu oyuncuyu zaten denedin."); return; }
+  const right = OYUNCULAR[S.target].isim === name;
+  S.guesses.push({ name, result: right ? "right" : "wrong" });
+  afterGuess(right);
+}
+function passTurn() {
+  if (S.over) return;
+  S.guesses.push({ name: "Pas", result: "pass" });
+  afterGuess(false);
+}
+function afterGuess(right) {
+  $("guessInput").value = ""; closeSuggest(); showMsg("");
+  if (right) { S.over = true; S.won = true; }
+  else if (S.guesses.length >= MAX_GUESS) { S.over = true; S.won = false; }
+  if (S.over && S.mode === "daily") recordDailyResult();
+  saveDaily();
+  render(false);
+  if (S.over) scheduleResult(right ? 900 : 1100);
+}
+function recordDailyResult() {
+  const st = loadStats();
+  if (st.lastPlayedDay === S.day) return; // aynı gün iki kez sayma
+  st.played++;
+  st.lastPlayedDay = S.day;
+  if (S.won) {
+    st.wins++;
+    st.cur = (st.lastWinDay === S.day - 1) ? st.cur + 1 : 1;
+    st.max = Math.max(st.max, st.cur);
+    st.lastWinDay = S.day;
+    st.dist[S.guesses.length - 1]++;
+  } else {
+    st.cur = 0;
+  }
+  saveStats(st);
+}
+
+/* ---------- Görünüm ---------- */
+function render(initial) {
+  // Tab
+  document.querySelectorAll(".tab").forEach(t => t.classList.toggle("active", t.dataset.mode === S.mode));
+
+  // Serbest mod, zorluk henüz seçilmedi: yalnızca seçim ekranı
+  const picking = S.mode === "free" && !S.diff;
+  $("diffPick").hidden = !picking;
+  $("gameArea").hidden = picking;
+  if (picking) { closeSuggest(); return; }
+
+  const p = OYUNCULAR[S.target];
+  const clues = buildClues(p);
+  const visible = S.over ? clues.length : Math.min(clues.length, 1 + wrongCount());
+
+  $("filters").hidden = S.mode !== "free";
+  if (S.mode === "free") {
+    renderChips();
+    $("diffBadge").className = "diff-badge" + (S.diff === "zor" ? " hard" : "");
+    $("diffBadge").innerHTML = `<span class="dot"></span>Zorluk: <b>${DIFF_AD[S.diff]}</b> <button class="linkbtn" id="btnChangeDiff">Değiştir</button>`;
+    $("btnChangeDiff").onclick = showDiffPick;
+  }
+
+  // Kolay mod profil kartı
+  const showProfile = S.mode === "free" && S.diff === "kolay";
+  $("profile").hidden = !showProfile;
+  if (showProfile) {
+    $("profile").innerHTML = [["Milliyet", p.milliyet, bayrak(p.milliyet)], ["Mevki", p.mevki, ""], ["Doğum yılı", p.dogum, ""]]
+      .map(([l, v, f]) => `<div><div class="label">${l}</div><div class="val">${f ? `<span class="pflag">${f}</span>` : ""}${escapeHtml(String(v))}</div></div>`).join("");
+  }
+
+  // Meta
+  $("metaLeft").innerHTML = S.mode === "daily"
+    ? `Günün oyuncusu <b>#${S.day}</b>`
+    : `<b>Serbest</b> · ${currentFilter().ad} · ${DIFF_AD[S.diff]}`;
+  $("metaRight").innerHTML = `Tahmin <b>${Math.min(S.guesses.length, MAX_GUESS)}/${MAX_GUESS}</b>`;
+
+  // İpuçları
+  const box = $("clues");
+  box.innerHTML = "";
+  clues.forEach((c, i) => {
+    const el = document.createElement("div");
+    const isVisible = i < visible;
+    el.className = "clue " + c.type + (isVisible ? "" : " locked") + (isVisible && !initial && i >= S.shownClues ? " new" : "");
+    if (isVisible && !initial && i >= S.shownClues) el.style.animationDelay = ((i - S.shownClues) * 0.08) + "s";
+    let badge;
+    if (c.type === "club") badge = isVisible ? kulupRozet(c.text) : `<div class="num">?</div>`;
+    else {
+      const ic = c.label === "Milliyet" ? (isVisible ? bayrak(c.text) : "🌍") : c.label === "Mevki" ? "📍" : "🎂";
+      badge = `<div class="num${c.label === "Milliyet" && isVisible ? " flag" : ""}">${ic}</div>`;
+    }
+    el.innerHTML = `${badge}<div class="body"><div class="label">${c.label}</div>` +
+      (isVisible
+        ? `<div class="val">${c.years ? `<span class="years">${c.years}</span>` : ""}${escapeHtml(c.text)}</div>`
+        : `<div class="val">• • • • •</div>`) + `</div>`;
+    // Kilitli ipuçlarından yalnızca bir sonrakini göster, gerisini gizle (sürpriz kalsın)
+    if (!isVisible && i > visible) el.style.display = "none";
+    box.appendChild(el);
+  });
+  S.shownClues = visible;
+
+  // Tahminler
+  const gl = $("guesses");
+  gl.innerHTML = "";
+  for (let i = 0; i < MAX_GUESS; i++) {
+    const g = S.guesses[i];
+    const el = document.createElement("div");
+    if (g) {
+      el.className = "g " + g.result + (!initial && i >= S.shownGuesses ? " new" : "");
+      el.innerHTML = `<span class="sq"></span>${g.result === "pass" ? "Pas geçildi" : escapeHtml(g.name)}`;
+    } else {
+      el.className = "g";
+      el.innerHTML = `<span class="sq"></span>${i + 1}. tahmin`;
+    }
+    gl.appendChild(el);
+  }
+  S.shownGuesses = S.guesses.length;
+
+  // Giriş alanı / bitiş
+  $("guessBox").style.display = S.over ? "none" : "";
+  $("endBar").classList.toggle("show", S.over);
+  $("btnNewFree").textContent = S.mode === "free" ? "Yeni oyuncu" : "Serbest moda geç";
+}
+
+function escapeHtml(s) { return s.replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
+
+let msgTimer;
+function showMsg(t) {
+  $("msg").textContent = t;
+  clearTimeout(msgTimer);
+  if (t) msgTimer = setTimeout(() => $("msg").textContent = "", 2600);
+}
+function toast(t) {
+  const el = $("toast"); el.textContent = t; el.classList.add("show");
+  setTimeout(() => el.classList.remove("show"), 1700);
+}
+
+/* ---------- Otomatik tamamlama ---------- */
+let sugItems = [], sugActive = -1;
+function updateSuggest() {
+  const q = norm($("guessInput").value);
+  const box = $("suggest");
+  if (!q) { closeSuggest(); return; }
+  const guessed = new Set(S.guesses.map(g => g.name));
+  const scored = [];
+  for (const p of OYUNCULAR) {
+    if (guessed.has(p.isim)) continue;
+    const n = p._n;
+    let score = -1;
+    if (n.startsWith(q)) score = 0;
+    else if (n.split(" ").some(w => w.startsWith(q))) score = 1;
+    else if (n.includes(q)) score = 2;
+    if (score >= 0) scored.push({ p, score });
+  }
+  scored.sort((a, b) => a.score - b.score || a.p.isim.localeCompare(b.p.isim, "tr"));
+  sugItems = scored.slice(0, 8).map(s => s.p);
+  sugActive = sugItems.length ? 0 : -1;
+  if (!sugItems.length) {
+    box.innerHTML = `<div style="color:var(--muted);cursor:default">Eşleşen oyuncu yok</div>`;
+    box.classList.add("open");
+    return;
+  }
+  box.innerHTML = sugItems.map((p, i) => `<div data-i="${i}" class="${i === sugActive ? "active" : ""}">${highlight(p.isim, q)}</div>`).join("");
+  box.classList.add("open");
+}
+// Normalize edilmiş eşleşmeyi orijinal isimde vurgula
+function highlight(name, q) {
+  const n = norm(name);
+  const idx = n.indexOf(q);
+  if (idx < 0 || n.length !== name.length) return escapeHtml(name);
+  return escapeHtml(name.slice(0, idx)) + "<mark>" + escapeHtml(name.slice(idx, idx + q.length)) + "</mark>" + escapeHtml(name.slice(idx + q.length));
+}
+function closeSuggest() { $("suggest").classList.remove("open"); sugItems = []; sugActive = -1; }
+function setActive(i) {
+  sugActive = i;
+  [...$("suggest").children].forEach((el, k) => el.classList.toggle("active", k === i));
+  const el = $("suggest").children[i]; if (el) el.scrollIntoView({ block: "nearest" });
+}
+function trySubmitFromInput() {
+  if (sugActive >= 0 && sugItems[sugActive]) { submitGuess(sugItems[sugActive].isim); return; }
+  const q = norm($("guessInput").value);
+  if (!q) return;
+  const exact = OYUNCULAR.find(p => p._n === q);
+  if (exact) submitGuess(exact.isim); else showMsg("Listeden bir futbolcu seç.");
+}
+
+/* ---------- Sonuç / paylaşım ---------- */
+function shareText() {
+  const squares = S.guesses.map(g => g.result === "right" ? "🟩" : g.result === "pass" ? "⬛" : "🟥").join("");
+  const score = S.won ? `${S.guesses.length}/${MAX_GUESS}` : `X/${MAX_GUESS}`;
+  const head = S.mode === "daily" ? `${GAME_NAME} #${S.day} ${score}` : `${GAME_NAME} (Serbest · ${currentFilter().ad} · ${DIFF_AD[S.diff]}) ${score}`;
+  return `⚽ ${head}\n${squares}`;
+}
+let cdTimer;
+function openResult() {
+  const p = OYUNCULAR[S.target];
+  $("resultHead").innerHTML = `
+    <div class="big">${S.won ? "🎉" : "😔"}</div>
+    <div class="sub">${S.won ? (S.guesses.length === 1 ? "İlk tahminde bildin!" : `${S.guesses.length} tahminde bildin!`) : "Bu sefer olmadı. Doğru cevap:"}</div>
+    <div class="who">${escapeHtml(p.isim)}</div>
+    <div class="sub">${bayrak(p.milliyet)} ${escapeHtml(p.milliyet)} · ${escapeHtml(p.mevki)} · ${p.dogum}</div>
+    <div class="crest-row">${p.kariyer.map(c => kulupRozet(c.kulup).replace('class="num crest"', `class="num crest" title="${escapeHtml(c.kulup)}"`)).join("")}</div>`;
+  $("sharePre").textContent = shareText();
+  $("btnResultAction").textContent = S.mode === "free" ? "🎲 Yeni oyuncu" : "📊 İstatistikler";
+  clearInterval(cdTimer);
+  if (S.mode === "daily") {
+    const tick = () => {
+      const now = new Date();
+      const next = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+      let s = Math.max(0, Math.floor((next - now) / 1000));
+      const h = String(Math.floor(s / 3600)).padStart(2, "0"); s %= 3600;
+      const m = String(Math.floor(s / 60)).padStart(2, "0"); s %= 60;
+      $("countdown").innerHTML = `Sıradaki oyuncu<b>${h}:${m}:${String(s).padStart(2, "0")}</b>`;
+      if (todayNumber() !== S.day) startDaily();
+    };
+    tick(); cdTimer = setInterval(tick, 1000);
+  } else {
+    $("countdown").innerHTML = "";
+  }
+  openModal("resultModal");
+}
+async function copyShare() {
+  const t = shareText();
+  let ok = false;
+  try { if (navigator.clipboard && window.isSecureContext) { await navigator.clipboard.writeText(t); ok = true; } } catch {}
+  if (!ok) {
+    const ta = document.createElement("textarea");
+    ta.value = t; ta.style.position = "fixed"; ta.style.opacity = "0";
+    document.body.appendChild(ta); ta.select();
+    try { ok = document.execCommand("copy"); } catch {}
+    ta.remove();
+  }
+  toast(ok ? "Sonuç kopyalandı ✓" : "Kopyalanamadı, metni elle seç");
+}
+
+/* ---------- İstatistik ---------- */
+function renderStats() {
+  const st = loadStats();
+  const cur = (st.lastWinDay !== null && st.lastWinDay >= todayNumber() - 1) ? st.cur : 0;
+  const pct = st.played ? Math.round(st.wins / st.played * 100) : 0;
+  $("statsGrid").innerHTML = [
+    [st.played, "Oynanan"], [pct, "Kazanma %"], [cur, "Mevcut seri"], [st.max, "En uzun seri"]
+  ].map(([n, l]) => `<div><div class="n">${n}</div><div class="l">${l}</div></div>`).join("");
+  const max = Math.max(1, ...st.dist);
+  const todayWinRow = (S.mode === "daily" && S.over && S.won) ? S.guesses.length - 1 : -1;
+  $("distChart").innerHTML = st.dist.map((v, i) => `
+    <div class="row"><span class="k">${i + 1}</span>
+      <div class="bar ${i === todayWinRow ? "hl" : ""}" style="width:${Math.max(7, v / max * 100)}%">${v}</div>
+    </div>`).join("");
+}
+
+/* ---------- Modallar ---------- */
+function openModal(id) { $(id).classList.add("open"); }
+function closeAll() { document.querySelectorAll(".overlay").forEach(o => o.classList.remove("open")); }
+document.querySelectorAll(".overlay").forEach(o => {
+  o.addEventListener("click", e => { if (e.target === o || e.target.hasAttribute("data-close")) o.classList.remove("open"); });
+});
+document.addEventListener("keydown", e => { if (e.key === "Escape") { closeAll(); closeSuggest(); } });
+
+/* ---------- Olaylar ---------- */
+const inp = $("guessInput");
+inp.addEventListener("input", updateSuggest);
+inp.addEventListener("keydown", e => {
+  if (e.key === "ArrowDown" && sugItems.length) { e.preventDefault(); setActive((sugActive + 1) % sugItems.length); }
+  else if (e.key === "ArrowUp" && sugItems.length) { e.preventDefault(); setActive((sugActive - 1 + sugItems.length) % sugItems.length); }
+  else if (e.key === "Enter") { e.preventDefault(); trySubmitFromInput(); }
+});
+inp.addEventListener("blur", () => setTimeout(closeSuggest, 150));
+$("suggest").addEventListener("mousedown", e => {
+  const d = e.target.closest("div[data-i]"); if (!d) return;
+  e.preventDefault(); submitGuess(sugItems[+d.dataset.i].isim);
+});
+$("btnGuess").addEventListener("click", trySubmitFromInput);
+$("btnPass").addEventListener("click", passTurn);
+$("btnHelp").addEventListener("click", () => openModal("helpModal"));
+$("btnStats").addEventListener("click", () => { renderStats(); openModal("statsModal"); });
+$("btnShowResult").addEventListener("click", openResult);
+$("btnNewFree").addEventListener("click", () => S.mode === "free" ? startFree() : showDiffPick());
+$("btnCopy").addEventListener("click", copyShare);
+$("btnResultAction").addEventListener("click", () => {
+  closeAll();
+  if (S.mode === "free") startFree(); else { renderStats(); openModal("statsModal"); }
+});
+document.querySelectorAll(".tab").forEach(t => t.addEventListener("click", () => {
+  if (t.dataset.mode === S.mode && S.mode === "daily") return;
+  closeAll();
+  t.dataset.mode === "daily" ? startDaily() : showDiffPick();
+}));
+
+// İlk ziyarette yardımı göster
+startDaily();
+try {
+  if (!localStorage.getItem("fw-seen-help")) { if (!S.over) openModal("helpModal"); localStorage.setItem("fw-seen-help", "1"); }
+} catch {}
+</script>
+</body>
+</html>
